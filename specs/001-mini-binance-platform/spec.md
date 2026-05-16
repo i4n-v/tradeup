@@ -14,6 +14,14 @@
 - Q: Default sort order for transaction history list → A: **Descending by time (newest first).**
 - Q: Can the user change their own email from profile in this version? → A: **No — email is immutable after registration for v1; profile is name and avatar only.**
 - Q: Precision of quoted/executed BTC price (BRL per 1 BTC) stored on transactions and used in formulas → A: **Two decimal places (BRL scale 2), within the stated min/max band.**
+- Q: Avatar image validation limits (media type, size, dimensions) → A: **JPEG, PNG, or WebP; maximum file size 5 MB; maximum dimensions 4096×4096 px.**
+- Q: Transaction history listing and pagination → A: **Offset/limit via client `page` and `limit` (1-based `page`); default `limit` 50; `limit` capped at 200; order remains newest first.**
+- Q: API authentication using Laravel Sanctum (recommended policy for this product) → A: **Personal Access Tokens (Bearer) via Sanctum for the RN/API client (SPA cookie auth is not the primary path here); token expires seven (7) days after issuance; sign-out revokes that token; no OAuth-style refresh token in v1.**
+- Q: When BTC quote is unavailable before trade or Dashboard read → A: **Block trading until a valid quote exists (FR‑012 band); Dashboard shows explicit error/neutral unavailable state—not a fabricated in-band price.**
+- Q: Does successful registration return an API auth token? → A: **No — registration creates the user and wallet only; the first Sanctum Bearer token is issued solely from the dedicated sign-in (login) flow.**
+- Q: Canonical timezone for stored and API-exposed timestamps → A: **UTC only; ISO 8601 / RFC 3339 with `Z` or explicit `+00:00` offset in API payloads; ordering “newest first” uses this instant.**
+- Q: BUY when `amountBRL / price` rounds to zero BTC → A: **Reject BUY (clear error), no debit, no transaction—the executed `btcGain` after FR‑019 rounding MUST be strictly positive (not 0.00000000 BTC).**
+- Q: SELL when `amountBTC * price` rounds to zero BRL → A: **Reject SELL (clear error), no wallet change, no transaction—`brlGain` after FR‑023 MUST be strictly greater than 0.00 BRL (not 0.00).**
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -23,27 +31,29 @@ A new person registers with their name, email, and password. The system creates 
 
 **Why this priority**: Without an account and wallet, no other capability is usable.
 
-**Independent Test**: Register a new user and confirm they exist with a wallet in the initial state (BRL funded, no BTC).
+**Independent Test**: Register a new user and confirm they exist with a wallet in the initial state (BRL funded, no BTC); confirm **registration does not activate an authenticated API session** (no Bearer token from register); confirm protected routes remain unauthorized until explicit sign-in succeeds.
 
 **Acceptance Scenarios**:
 
-1. **Given** no existing account for the email, **When** the person submits valid registration details, **Then** the user is created with a unique email, a secured password representation, and exactly one wallet with **BRL balance 10,000.00** (two decimal places) **and BTC balance 0**.
+1. **Given** no existing account for the email, **When** the person submits valid registration details, **Then** the user is created with a unique email, a secured password representation, and exactly one wallet with **BRL balance 10,000.00** (two decimal places) **and BTC balance 0**, **and** the registration response MUST **not** issue a **Sanctum personal access token** (Bearer comes only from sign-in per User Story 2).
 2. **Given** an email already registered, **When** the same email is submitted again, **Then** registration is rejected and no duplicate user or wallet is created.
+3. **Given** a person who has **just** registered successfully **but not yet signed in**, **When** they call a protected wallet or Dashboard endpoint **without** presenting a token from sign-in, **Then** the request is **unauthorized**.
 
 ---
 
 ### User Story 2 - Sign in and act as yourself (Priority: P1)
 
-A registered user proves their identity so the system can bind every protected action to that user and block everyone else.
+A registered user proves their identity so the system can bind every protected action to that user and block everyone else. **This flow is the sole source of the first Bearer token after account creation** — successful registration alone does not issue a token (see User Story 1).
 
 **Why this priority**: Trading and wallet access must never cross between users.
 
-**Independent Test**: Sign in as user A and confirm all protected operations are attributed to A; attempt access without proof of identity and confirm refusal.
+**Independent Test**: Sign in as user A and confirm all protected operations are attributed to A; verify the Bearer token is required on protected API routes; verify sign-out revokes it; verify expired tokens are refused; verify access without proof of identity is refused.
 
 **Acceptance Scenarios**:
 
-1. **Given** a registered user with correct credentials, **When** they authenticate, **Then** the system establishes an authenticated context for that user until sign-out or expiry per product rules.
-2. **Given** no authenticated context, **When** the user attempts trade, wallet, history, profile, or Dashboard access, **Then** the system rejects the action as unauthorized.
+1. **Given** a registered user with correct credentials, **When** they authenticate, **Then** the system issues them a usable **Bearer personal access token** (Sanctum) that remains valid for up to **seven (7) days** from issuance or until invalidated as below.
+2. **Given** no valid authenticated context (**missing, malformed, revoked, or expired Bearer token**), **When** the user attempts trade, wallet, history, profile, or Dashboard access, **Then** the system rejects the action as unauthorized.
+3. **Given** an authenticated session, **When** the user performs **explicit sign-out** (server-acknowledged), **Then** the **current** Bearer token MUST be revoked and subsequent protected calls MUST fail until a new authentication succeeds.
 
 ---
 
@@ -53,13 +63,14 @@ An authenticated user opens the primary home screen (Dashboard) and sees their o
 
 **Why this priority**: It is the first meaningful post-login experience and the anchor for trading decisions; balances and price must be trustworthy.
 
-**Independent Test**: Sign in and open the Dashboard; verify displayed BRL and BTC match the wallet and the shown price is within the allowed range and suitable for user awareness (trade still locks price at execution per existing rules).
+**Independent Test**: Sign in and open the Dashboard; verify displayed BRL and BTC match the wallet; verify that when an authoritative BTC quote exists it is within the allowed range (trade execution still locks its own snapshot per existing rules); verify that when no quote exists the UI exposes an explicit unavailable/error state **without** a misleading numeric BTC price.
 
 **Acceptance Scenarios**:
 
-1. **Given** an authenticated user with a wallet, **When** they open the Dashboard, **Then** they see their BRL balance, their BTC balance, and the current BTC price in BRL (within the product’s allowed price bounds).
+1. **Given** an authenticated user with a wallet **and an authoritative BTC quote obtainable**, **When** they open the Dashboard, **Then** they see their BRL balance, their BTC balance, and the **current BTC price in BRL** satisfying FR-012 bounds.
 2. **Given** two different users, **When** each opens their Dashboard, **Then** each sees only their own balances; the other user’s figures never appear.
 3. **Given** the wallet changed after a successful trade, **When** the user opens or refreshes the Dashboard, **Then** balances reflect the updated wallet state (consistent with the read moment).
+4. **Given** **no authoritative BTC quote** satisfying FR‑012 **can be produced** at Dashboard read time, **When** they open the Dashboard, **Then** wallet balances MAY still appear correctly but the product MUST communicate **explicit price-unavailability** and MUST NOT display **any numeric BTC price purporting** to satisfy FR‑012 (**no fabricated quote**).
 
 ---
 
@@ -69,13 +80,15 @@ An authenticated user spends a chosen BRL amount to acquire BTC using the BTC pr
 
 **Why this priority**: Core revenue-bearing behavior for the product; correctness failures are unacceptable.
 
-**Independent Test**: With a known price, execute a buy and verify wallet balances and a single immutable transaction recording exact BRL debited, BTC credited, and execution price.
+**Independent Test**: With a known price, execute a buy and verify wallet balances and a single immutable transaction recording exact BRL debited, BTC credited, and execution price; verify BUY is rejected **without ledger change** when FR‑019 `btcGain` would round to **0.00000000**.
 
 **Acceptance Scenarios**:
 
-1. **Given** sufficient BRL and a valid positive `amountBRL`, **When** the user buys BTC, **Then** BRL decreases by `amountBRL`, BTC increases by `amountBRL / executionPrice`, one BUY transaction exists with those amounts and price, and all updates appear as one consistent state change.
+1. **Given** sufficient BRL and a valid positive `amountBRL` such that **`btcGain`** ( **`amountBRL / executionPrice` rounded half up to eight decimals**) is **strictly greater than 0.00000000 BTC**, **When** the user buys BTC, **Then** BRL decreases by `amountBRL`, BTC increases by **`btcGain`**, one BUY transaction exists with those amounts and price, and all updates appear as one consistent state change.
 2. **Given** insufficient BRL for the requested spend, **When** the user attempts the buy, **Then** the operation fails, balances are unchanged, and no transaction is created.
 3. **Given** zero or negative `amountBRL`, **When** the user attempts the buy, **Then** the operation is rejected with a clear error and no wallet or transaction change.
+4. **Given** **no authoritative execution-time BTC quote** satisfying FR‑012 **at commit time**, **When** they attempt to buy BTC, **Then** the operation fails **with no wallet debit and no new transaction.**
+5. **Given** **`amountBRL / executionPrice` rounded half up to eight decimal places** yields **0.00000000 BTC**, **When** they attempt to buy BTC, **Then** the operation is rejected with a clear validation error **with no wallet debit** and **no new transaction.**
 
 ---
 
@@ -85,34 +98,38 @@ An authenticated user sells a chosen BTC amount and receives BRL computed from t
 
 **Why this priority**: Paired with buying; same integrity and safety requirements.
 
-**Independent Test**: With a known price, execute a sell and verify wallet balances and one SELL transaction with exact executed values.
+**Independent Test**: With a known price, execute a sell and verify wallet balances and one SELL transaction with exact executed values; verify SELL is rejected **without ledger change** when FR‑023 `brlGain` would round to **0.00 BRL**.
 
 **Acceptance Scenarios**:
 
-1. **Given** sufficient BTC and valid positive `amountBTC`, **When** the user sells, **Then** BTC decreases by `amountBTC`, BRL increases by `amountBTC * executionPrice`, one SELL transaction records exact amounts and price, and wallet state is fully consistent.
+1. **Given** sufficient BTC and valid positive `amountBTC` such that **`brlGain`** ( **`amountBTC * executionPrice` rounded half up to two decimals**) is **strictly greater than 0.00 BRL**, **When** the user sells, **Then** BTC decreases by `amountBTC`, BRL increases by **`brlGain`**, one SELL transaction records those exact amounts and price, and wallet state is fully consistent.
 2. **Given** insufficient BTC, **When** the user attempts the sell, **Then** the operation fails with balances unchanged and no transaction created.
 3. **Given** zero or negative `amountBTC`, **When** the user attempts the sell, **Then** the operation is rejected with a clear error and no state change.
+4. **Given** **no authoritative execution-time BTC quote** satisfying FR‑012 **at commit time**, **When** they attempt to sell, **Then** the operation fails **with no wallet change and no new transaction.**
+5. **Given** **`amountBTC * executionPrice` rounded half up to two decimal places** yields **0.00 BRL**, **When** they attempt to sell, **Then** the operation is rejected with a clear validation error **with no wallet change** and **no new transaction.**
 
 ---
 
 ### User Story 6 - See your trade history (Priority: P2)
 
-An authenticated user reviews a **chronological list of their own completed trades**, **newest first**.
+An authenticated user reviews a **paged, chronological list of their own completed trades**, **newest first**, using client-supplied **`page`** and **`limit`**.
 
 **Why this priority**: Transparency and reconciliation after trading.
 
-**Independent Test**: After trades, list history and confirm only records belonging to that user appear, each immutable and matching wallet movements, with the latest trade at the top.
+**Independent Test**: After trades, list history with valid `page`/`limit` and confirm only records belonging to that user appear, each immutable and matching wallet movements, with the latest trade at the top of page 1; confirm invalid paging inputs are rejected.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with past trades, **When** they request history, **Then** they see only their transactions **ordered from newest to oldest by execution time**, with type (BUY or SELL), BTC amount, BRL amount, price, and timestamp.
+1. **Given** a user with past trades, **When** they request history with valid **`page`** and **`limit`**, **Then** they see only their transactions for that page **ordered from newest to oldest by execution time** (per **UTC** `createdAt`; see FR‑031), with type (BUY or SELL), BTC amount, BRL amount, price, and **`createdAt`** in **UTC ISO 8601** form.
 2. **Given** another user’s trades, **When** this user requests history, **Then** those records never appear.
+3. **Given** omitted **`page`** or **`limit`**, **When** they request history, **Then** the system applies **default `page` 1** and **default `limit` 50**.
+4. **Given** **`limit` greater than 200**, **non-positive `page`**, **non-positive `limit`**, or other invalid paging values, **When** they request history, **Then** the system rejects the request with a clear validation error and returns no rows.
 
 ---
 
 ### User Story 7 - Update profile name and avatar (Priority: P2)
 
-An authenticated user updates their display name and optional avatar image subject to validation rules. **Email is not editable** in this version after registration.
+An authenticated user updates their display name and optional avatar image subject to validation rules (**JPEG, PNG, or WebP**; **≤5 MB**; **≤4096×4096 px**). **Email is not editable** in this version after registration.
 
 **Why this priority**: Identity presentation without weakening security boundaries.
 
@@ -121,7 +138,7 @@ An authenticated user updates their display name and optional avatar image subje
 **Acceptance Scenarios**:
 
 1. **Given** an authenticated user, **When** they update name and a valid image, **Then** stored name and avatar reference update and other users are unaffected.
-2. **Given** an invalid image (type or size outside allowed bounds), **When** submission is attempted, **Then** the system rejects it with a clear error and keeps the prior avatar.
+2. **Given** an invalid image (not **JPEG, PNG, or WebP**; file over **5 MB**; or dimensions over **4096×4096**), **When** submission is attempted, **Then** the system rejects it with a clear error and keeps the prior avatar.
 3. **Given** user A, **When** A attempts to change B’s profile, **Then** the operation is blocked.
 4. **Given** an authenticated user, **When** they attempt to change their registered email, **Then** the system **does not apply** the change (capability absent or rejected) and email **remains** the original value.
 
@@ -129,12 +146,19 @@ An authenticated user updates their display name and optional avatar image subje
 
 ### Edge Cases
 
+- **Post-register, pre-login**: user and wallet exist **before** any **Bearer** token; protected API access MUST fail until sign-in issues a token.
+- **BTC quote unobtainable** (upstream failure, outage, gap in authority): trading MUST **fail closed** (**no** BUY/SELL succeeds **without** a fresh authoritative quote satisfying FR‑012 **at execution**); Dashboard MUST **not** present a deceptive in-band BTC price (**explicit unavailable/error/neutral state only**; **no** fabricated FR‑012‑compliant numeric display).
+- API calls with Bearer token **past `expires_at`**, **revoked**, or **not belonging** to that user MUST be unauthorized; MUST NOT mutate wallet or trades.
+- Avatar upload outside allowed bounds: wrong media type (not **JPEG**, **PNG**, or **WebP**), file larger than **5 MB**, or width/height greater than **4096** px — reject; MUST NOT replace the prior avatar.
 - Attempt to change email via self-service after registration: **not in scope for v1**; MUST NOT alter stored email.
 - Buying with insufficient BRL: reject; no partial debit; no transaction.
+- **BUY with dust `amountBRL`**: if **`amountBRL / executionPrice` rounded half up to eight decimals** is **0.00000000**, reject; **no** BRL debit; **no** transaction (**no paying BRL for zero credited BTC**).
+- **SELL with dust `amountBTC`**: if **`amountBTC * executionPrice` rounded half up to two decimals** is **0.00 BRL**, reject; **no** BTC debit; **no** transaction (**no selling BTC for zero credited BRL**).
 - Selling with insufficient BTC: reject; no partial debit; no transaction.
 - Zero or negative trade inputs: reject with validation error.
 - BRL trade amounts with more than two decimal places: reject (scale-2 only).
 - SELL `amountBTC` with more than eight decimal places: reject (BTC scale-8 only).
+- Transaction history paging: **`page`** is **1-based** and MUST be ≥ **1**; **`limit`** is client-supplied, **default 50**, MUST be ≥ **1** and MUST NOT exceed **200**; otherwise reject with validation error.
 - Rapid repeated trades or overlapping operations: each completes as if run against authoritative balances; no negative balances; no “lost” or double-applied amounts; order of commits reflects acceptable product semantics (e.g. sequential consistency per wallet).
 - Price changes between “view” and “trade”: only the price locked at execution time applies; no retroactive change to past transactions; the Dashboard may show a quote that differs from a later trade’s execution price if the market value moved in between.
 - Dashboard read vs wallet mutation: if a trade completes while the user is viewing the Dashboard, the next explicit refresh or navigation MUST be able to show balances consistent with the post-trade wallet (no permanent stale display requirement beyond normal product refresh semantics).
@@ -147,14 +171,16 @@ An authenticated user updates their display name and optional avatar image subje
 **Identity & access**
 
 - **FR-001**: The system MUST allow registration with name, email, and password; email MUST be unique across all users.
+- **FR-001a**: **Registration** MUST persist the new user and wallet but MUST **not** create or return a **Sanctum personal access token** as part of that operation; the client MUST obtain **`Authorization: Bearer`** credentials only through **sign-in** subsequent to successful registration.
 - **FR-002**: The system MUST store passwords in a non-reversible form suitable for subsequent verification without ever storing the raw password for display.
 - **FR-003**: The system MUST authenticate users before any wallet, trade, transaction history, profile mutation, or access to the Dashboard.
 - **FR-004**: Every protected operation MUST execute in a user context that identifies exactly one user; cross-user access MUST be impossible.
+- **FR-004a**: The **delivery API** MUST use **Laravel Sanctum personal access tokens**: clients authenticate with **`Authorization: Bearer <token>`** on protected routes. Tokens MUST expire **seven (7) days** after issuance unless revoked sooner. Explicit **sign-out** MUST revoke the token presented for that sign-out operation. Tokens MUST persist server-side such that revocation and expiry are enforced on every protected request (no trusting the client alone).
 
 **User & profile**
 
 - **FR-005**: Each user MUST have: stable identifier, name, email, optional avatar reference, creation timestamp, and exactly one wallet.
-- **FR-006**: Users MUST be able to update their own name and avatar only; avatar content MUST satisfy agreed size and media-type constraints; invalid submissions MUST be rejected without corrupting the prior avatar.
+- **FR-006**: Users MUST be able to update their own name and avatar only; avatar uploads MUST be **JPEG, PNG, or WebP**; file size MUST NOT exceed **5 MB**; image width and height MUST each be **at most 4096** px; invalid submissions MUST be rejected without corrupting the prior avatar.
 - **FR-007**: **Email MUST remain unchanged after successful registration** for **end-user** profile and account flows in this version; profile self-service covers **name and avatar only**. *(Self-service email change, if added later, MUST preserve global uniqueness.)*
 
 **Wallet**
@@ -166,34 +192,36 @@ An authenticated user updates their display name and optional avatar image subje
 
 **Market price**
 
-- **FR-012**: The system MUST expose a current BTC price in BRL for every trade execution and for Dashboard display, **with exactly two decimal places**, and **MUST** always fall **between 200,000.00 and 300,000.00 BRL inclusive** per **1** BTC at the time the quote applies.
-- **FR-013**: The price MAY differ across executions or time; each trade MUST snapshot the **execution** price on the transaction record **at two decimal places**, matching the authoritative quote used for that trade’s calculations.
+- **FR-012**: Any **published numeric BTC–BRL price** used **for Dashboard display** or **for trade execution**, when shown or applied **as the authoritative quote**, MUST satisfy **exactly two decimal places** and **between 200,000.00 and 300,000.00 BRL inclusive** per **1** BTC. The platform MUST NOT **fabricate** such a compliant price when none is **authoritatively obtainable**.
+- **FR-012a**: **BUY** and **SELL** MUST be rejected (**clear error**) with **zero wallet mutation** and **no new transaction** when **no authoritative quote** satisfying FR‑012 exists **for that execution**.
+- **FR-013**: The price MAY differ across executions or time; each successful trade MUST snapshot the **execution** price on the transaction record **at two decimal places**, matching the authoritative quote obtained **for that execution**.
 
 **Dashboard (home)**
 
-- **FR-014**: The system MUST provide an initial **Dashboard** (primary home after authentication) that presents the authenticated user’s BRL balance, BTC balance, and the current BTC price in BRL.
+- **FR-014**: The Dashboard MUST present the authenticated user’s **BRL** balance and **BTC** balance plus **BTC–BRL market context**: **either** a **numeric authoritative price** obeying FR‑012 **when obtainable**, **or**, when unobtainable, an explicit **price-unavailable** treatment that MUST **not** show a deceptive FR‑012‑styled numeric BTC price (**no bogus quote**).
 - **FR-015**: Dashboard balances MUST reflect the user’s own wallet only and MUST match authoritative wallet values at the time they are read for that view.
-- **FR-016**: The BTC price shown on the Dashboard MUST satisfy the same allowed range as execution-time quotes (see FR-012) at the moment it is supplied for display; the product MUST make clear that a subsequent trade applies the price locked at trade execution, which may differ if the quote moves.
+- **FR-016**: When the Dashboard renders a numeric BTC–BRL price, it MUST satisfy FR‑012 at presentation time AND the UX MUST reinforce that trades lock the **execution-moment snapshot** (**may diverge**) if quotes move afterward. When no authoritative BTC–BRL quote satisfying FR‑012 exists at Dashboard read time, numeric price substitution with a fabricated compliant value MUST NOT occur (**see Edge Cases**: quote unobtainable).
 
 **Trading — BUY**
 
 - **FR-017**: BUY input MUST be a single positive BRL spend amount; non-positive values MUST be rejected.
 - **FR-018**: BUY MUST verify available BRL is at least the spend amount before any balance movement.
-- **FR-019**: **BTC acquired** MUST equal **`amountBRL / executionPrice` rounded half up to exactly eight decimal places** (Scale-8 **round half up**). Intermediate precision MUST be sufficient that this rounding is deterministic and reproducible.
+- **FR-019**: **BTC acquired** (`btcGain`) MUST equal **`amountBRL / executionPrice` rounded half up to exactly eight decimal places** (Scale-8 **round half up**). Intermediate precision MUST be sufficient that this rounding is deterministic and reproducible. If **`btcGain`** equals **0.00000000**, BUY MUST be rejected with a clear error (**no** wallet change, **no** transaction)—every successful BUY **MUST have** **`btcGain` strictly greater than 0.00000000 BTC**.
 - **FR-020**: On successful BUY, wallet MUST decrease BRL by the spend amount and increase BTC by the executed BTC amount; exactly one BUY transaction MUST be created with user, type BUY, `btcAmount`, `brlAmount` (spend), `price` (execution), and `createdAt`.
 
 **Trading — SELL**
 
 - **FR-021**: SELL input MUST be a single positive BTC amount with **at most eight decimal places**; non-positive values or higher precision MUST be rejected.
 - **FR-022**: SELL MUST verify available BTC is at least the sold amount before any balance movement.
-- **FR-023**: **BRL received** MUST equal **`amountBTC * executionPrice` rounded half up to exactly two decimal places** (Scale-2 **round half up**, consistent with BRL ledger rules).
+- **FR-023**: **BRL received** (`brlGain`) MUST equal **`amountBTC * executionPrice` rounded half up to exactly two decimal places** (Scale-2 **round half up**, consistent with BRL ledger rules). If **`brlGain`** equals **0.00**, SELL MUST be rejected with a clear error (**no** wallet change, **no** transaction)—every successful SELL **MUST have** **`brlGain` strictly greater than 0.00 BRL**.
 - **FR-024**: On successful SELL, wallet MUST decrease BTC by the sold amount and increase BRL by the executed BRL amount; exactly one SELL transaction MUST be created with user, type SELL, matching amounts and execution price.
 
 **Transactions & history**
 
 - **FR-025**: Every successful trade MUST create exactly one immutable transaction; failed trades MUST create none.
 - **FR-026**: Transaction records MUST be immutable after creation and MUST store exact executed `btcAmount`, `brlAmount`, and `price`.
-- **FR-027**: Users MUST be able to list only their own transactions ordered by execution time **descending (newest first)**.
+- **FR-031**: All **persisted clock instants** exposed through the API (**including** **`Transaction.createdAt`**, **`User.createdAt`**, **`Wallet.updatedAt`**, token **`expires_at`** when returned) MUST be **UTC**. Serialized values MUST use **RFC 3339 / ISO 8601** with an explicit UTC indicator (**suffix `Z`** or **`+00:00`**). Listing and sort order (**e.g.** FR‑027 newest-first) MUST use **the same canonical UTC instant** without depending on client local zones.
+- **FR-027**: Users MUST be able to list only their own transactions ordered by execution time **descending (newest first)**. The listing API MUST accept client **`page`** and **`limit`** parameters: **`page`** is **1-based** and defaults to **1** when omitted; **`limit`** defaults to **50** when omitted, MUST be at least **1**, and MUST NOT exceed **200**; invalid combinations MUST be rejected with a clear validation error. Each response MUST contain at most **`limit`** rows for the requested **`page`**.
 
 **Validation & errors**
 
@@ -203,10 +231,10 @@ An authenticated user updates their display name and optional avatar image subje
 
 ### Key Entities *(include if feature involves data)*
 
-- **User**: Account for one person; attributes include identifier, name, unique email (immutable for the user after registration in v1), secured password material, optional avatar reference, created-at; owns exactly one **Wallet**.
-- **Wallet**: Holds **BRL** (scale **2**, half up when rounding to this scale) and **BTC** (scale **8**, half up when rounding to this scale) for one user; attributes include user reference, BRL balance, BTC balance, updated-at; subject to non-negative invariants and atomic updates.
-- **Transaction**: Immutable record of one completed trade; attributes include identifier, user reference, type (BUY or SELL), BTC amount, BRL amount, **execution `price` (BRL per BTC, two decimal places)**, created-at; always paired 1:1 with a successful trade.
-- **MarketPrice (concept)**: Authoritative **BRL per 1 BTC** at execution or display time, **scale 2 decimal places**, constrained **from 200,000.00 through 300,000.00 BRL inclusive**; each **Transaction** stores the **execution** snapshot at that scale.
+- **User**: Account for one person; attributes include identifier, name, unique email (immutable for the user after registration in v1), secured password material, optional avatar reference (uploads: **JPEG/PNG/WebP**, **≤5 MB**, **≤4096×4096** px), **created-at (UTC)**; owns exactly one **Wallet**.
+- **Wallet**: Holds **BRL** (scale **2**, half up when rounding to this scale) and **BTC** (scale **8**, half up when rounding to this scale) for one user; attributes include user reference, BRL balance, BTC balance, **updated-at (UTC)**; subject to non-negative invariants and atomic updates.
+- **Transaction**: Immutable record of one completed trade; attributes include identifier, user reference, type (BUY or SELL), BTC amount, BRL amount, **execution `price` (BRL per BTC, two decimal places)**, **`createdAt` (UTC execution instant)**; always paired 1:1 with a successful trade; users retrieve theirs via **paged lists** (**`page`**, **`limit`**; see FR-027).
+- **MarketPrice (concept)**: **Authoritative** **BRL per 1 BTC** quote **when obtainable**, **two decimal places**, constrained **from 200,000.00 through 300,000.00 inclusive**—used at trade commit and optionally on the Dashboard whenever a numeric compliant quote is surfaced; trades **never** proceed without authority at execution (FR‑012a); the Dashboard MUST **never** synthesize FR‑012‑compliant numbers when none exists; each persisted **Transaction** stores the execution snapshot at that scale when a trade succeeds.
 
 **Relationships**: User 1—1 Wallet; User 1—* Transaction; each Transaction references exactly one User.
 
@@ -220,28 +248,28 @@ An authenticated user updates their display name and optional avatar image subje
 
 **Before BUY (sketch)**  
 Wallet: `(brl, btc)`; valid request `amountBRL > 0`, `brl ≥ amountBRL`; **`p`** = execution price **in BRL per 1 BTC, two decimal places**, with **200,000.00 ≤ p ≤ 300,000.00**.  
-Compute `btcGain =` **`amountBRL / p` rounded half up to 8 decimal places**.
+Compute `btcGain =` **`amountBRL / p` rounded half up to 8 decimal places**; **`btcGain` MUST be strictly positive** for commit—otherwise BUY fails (**no** state change).
 
 **After successful BUY**  
 Wallet: `(brl - amountBRL, btc + btcGain)`; new **Transaction**(BUY, btcGain, amountBRL, **`p`**).
 
 **Before SELL**  
 Wallet: `(brl, btc)`; valid request `amountBTC > 0`, `btc ≥ amountBTC`; **`p`** as above.  
-Compute `brlGain =` **`amountBTC * p` rounded half up to 2 decimal places**.
+Compute `brlGain =` **`amountBTC * p` rounded half up to 2 decimal places**; **`brlGain` MUST be strictly greater than 0.00 BRL** for commit—otherwise SELL fails (**no** state change).
 
 **After successful SELL**  
 Wallet: `(brl + brlGain, btc - amountBTC)`; new **Transaction**(SELL, amountBTC, brlGain, **`p`**).
 
 **Failed attempt**  
-Wallet and transaction set unchanged from pre-attempt state.
+Wallet and transaction set unchanged from pre-attempt state (**includes refusal when no authoritative quote per FR‑012a**, **or BUY when computed `btcGain` is 0.00000000 per FR‑019**, **or SELL when computed `brlGain` is 0.00 per FR‑023**).
 
 ## Non-Functional Requirements *(mandatory when UI, auth, data, or network behavior changes)*
 
 - **NFR-001**: Under concurrent trading activity on the same account, the system MUST preserve wallet invariants and exact alignment between each committed transaction and the wallet state (no inconsistent intermediate states observable to the user).
-- **NFR-002**: Secrets and personally identifiable information MUST be protected: credentials must not be exposed in history or logs; users must only retrieve their own sensitive data.
+- **NFR-002**: Secrets and personally identifiable information MUST be protected: credentials must not be exposed in history or logs; users must only retrieve their own sensitive data. **Bearer tokens** MUST appear **only once** when issued (plain text shown to client at creation only as per Sanctum’s usual flow); MUST NOT appear in URLs or logs.
 - **NFR-003**: Trade confirmation and history views MUST present amounts and prices in forms exact to the stored transactional truth (no misleading rounding in summarized views beyond clearly labeled display conventions).
 - **NFR-004**: Profile and trading flows MUST expose validation failures in time for the user to correct inputs without side effects.
-- **NFR-005**: The Dashboard MUST not display another user’s wallet figures; any loading or error state for balances or price MUST avoid leaking whether other accounts exist or their activity.
+- **NFR-005**: The Dashboard MUST not display another user’s wallet figures; any loading or error state for balances or price MUST avoid leaking whether other accounts exist or their activity; **BTC price‑unavailability** MUST be surfaced without inventing plausible band‑compliant numbers.
 
 ## Success Criteria *(mandatory)*
 
@@ -251,16 +279,20 @@ Wallet and transaction set unchanged from pre-attempt state.
 - **SC-002**: 100% of historical records shown to a user belong to that user and match immutable transaction data.
 - **SC-003**: For a sample of trades, recomputing BRL/BTC from stored price and amounts using the published rounding rules yields exactly the stored ledger amounts (zero mismatches).
 - **SC-004**: New users complete registration and reach a tradable wallet state in one session without manual intervention (target: at least 95% success rate in usability tests once the product channel exists).
-- **SC-005**: After sign-in, at least 90% of test participants reach the Dashboard and correctly identify their BRL balance, BTC balance, and the shown BTC price in a single pass (moderated usability or benchmark scenario).
+- **SC-005**: After sign-in, at least 90% of test participants reach the Dashboard and correctly identify **their** BRL balance, **their** BTC balance, and—in runs where FR‑012 price is obtainable—the **shown** BTC‑BRL price in a single pass (moderated usability or benchmark scenario).
 
 ## Assumptions
 
-- **BRL canonical model**: All BRL amounts in wallet and transactions **MUST** be expressed with **two fractional digits** (e.g. initial credit **10,000.00 BRL**). BUY spend inputs **MUST** respect this precision. **BRL received on SELL** MUST be **`amountBTC * price` rounded half up to two decimal places.**
+- **BRL canonical model**: All BRL amounts in wallet and transactions **MUST** be expressed with **two fractional digits** (e.g. initial credit **10,000.00 BRL**). BUY spend inputs **MUST** respect this precision. **BRL received on SELL** MUST be **`amountBTC * price` rounded half up to two decimal places** and **must not be 0.00 on committed SELL** (**FR‑023**)—symmetric refusal with BUY dust (**FR‑019**).
 
-- **BTC canonical model**: **BTC** wallet balances and `btcAmount` on transactions **MUST** use **eight decimal places**. **BTC acquired on BUY** MUST be **`amountBRL / price` rounded half up to eight decimal places.** SELL input `amountBTC` MUST already respect eight-decimal precision or be rejected.
+- **BTC canonical model**: **BTC** wallet balances and `btcAmount` on transactions **MUST** use **eight decimal places**. **BTC acquired on BUY** MUST be **`amountBRL / price` rounded half up to eight decimal places.** SELL input `amountBTC` MUST already respect eight-decimal precision or be rejected. **BUY commits** (**FR‑019**) **MUST NOT** succeed when rounded **`btcGain`** is **0.00000000** (**no charging BRL for zero credited BTC**).
 
-- **BTC price quote model**: **BRL per 1 BTC** for execution, storage on transactions, and Dashboard display **MUST** use **two decimal places** and lie **from 200,000.00 through 300,000.00 BRL inclusive** whenever a valid quote is produced.
+- **BTC price quote model**: Whenever the platform obtains a BTC–BRL quote for display or execution, it **MUST** meet **two decimal places** and the **fixed min/max band** (FR‑012). **Failures to obtain quote** ⇒ **blocked trades** (**FR‑012a**) and Dashboard **explicit unavailability**, **never** deceptive synthetic prices.
 - **Email**: Set only at registration; **must not** be changed by the user through profile in v1.
-- Authentication “expiry or sign-out” details are product policy but do not change the requirement that protected actions always require a valid user context.
+- **Avatar uploads**: **JPEG, PNG, or WebP** only; **maximum 5 MB**; **maximum 4096×4096** pixels per dimension.
+- **Transaction history listing**: Returned in pages; client sends **`page`** (1-based, default **1**) and **`limit`** (default **50**, maximum **200**); **newest first** within each response.
+- **API authentication**: **Laravel Sanctum** personal access tokens; **Bearer** header on native client calls; **`expires_at` seven (7) days** after issuance; **logout revokes** the current token; **no OAuth-style refresh token** in **v1** (new sessions require issuing a new token via authenticated login).
+- **Registration vs sign-in**: **Register** establishes identity and wallet **without token**; **sign-in** is the exclusive route to the first Bearer token after account creation (**FR‑001a**, User Stories 1–2).
+- **Timestamps**: Persist and expose **UTC** only in the API (**FR‑031**); clients MAY render in the user’s local timezone **only as presentation**.
 - Deposits, withdrawals, KYC, multiple trading pairs, order books, limits, fees, and password recovery are out of scope unless added in a later specification.
 - The mechanism that produces the current BTC price within the allowed range is internal to the platform; only the bounded, execution-time behavior is specified here.
