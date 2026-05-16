@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '@configs/di-container.config';
 import { Registry } from '@lib/registry/registry.lib';
 import './global.css';
+import { API_BASE_URL } from '@env';
 
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" />
         <View className="flex-1 bg-base-900 pt-10">
-          <Text className="text-base-0 text-2xl font-bold">Hello World</Text>
+          <Text className="text-base-0 text-2xl font-bold">{API_BASE_URL}</Text>
         </View>
       </SafeAreaProvider>
     </QueryClientProvider>

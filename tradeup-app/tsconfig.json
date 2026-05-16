@@ -1,19 +1,46 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-      "baseUrl": ".",
-      "typeRoots": ["./node_modules/@types", "./types"],
-      "paths": {
-      "@/*": ["src/*"],
-      "@decorators/*": ["src/decorators/*"],
-      "@configs/*": ["src/configs/*"],
-      "@lib/*": ["src/lib/*"],
-      "@hooks/*": ["src/hooks/*"],
-      "@errors/*": ["src/errors/*"],
-      "@typings/*": ["src/types/*"],
-      "@assets/*": ["src/assets/*"]
+    "baseUrl": ".",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ],
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@decorators/*": [
+        "src/decorators/*"
+      ],
+      "@configs/*": [
+        "src/configs/*"
+      ],
+      "@lib/*": [
+        "src/lib/*"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
+      ],
+      "@errors/*": [
+        "src/errors/*"
+      ],
+      "@typings/*": [
+        "src/types/*"
+      ],
+      "@assets/*": [
+        "src/assets/*"
+      ]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
-  "exclude": ["**/node_modules", "**/Pods"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "src/types/declarations/*.d.ts",
+    "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/Pods"
+  ]
 }
