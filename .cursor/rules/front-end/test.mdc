@@ -1,0 +1,77 @@
+---
+description: Jest, RTL, Registry clear/register in RN tests — high impact
+globs: tradeup-app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+## React Native Testing — Jest, RTL, MVVM, Registry
+
+Tests follow **[docs/front-end/tests.md](../../../docs/front-end/tests.md)** and **[docs/front-end/architecture.md](../../../docs/front-end/architecture.md)**. Runner: **Jest** with **`@react-native/jest-preset`**; UI and hooks: **`@testing-library/react-native`** (`render`, `renderHook`, `waitFor`, `screen`). Prefer queries aligned with accessibility (`getByRole`, `getByLabelText`, `getByText`). Name cases with **`should …`** (`test('should …')`, `it('should …')`). Mock and quality pitfalls: **[testing-anti-patterns.md](../../../docs/shared/testing-anti-patterns.md)**.
+
+**Incorrect (fake Registry or real HTTP):**
+
+```tsx
+jest.mock('@/lib/registry/registry.lib', () => ({
+  Registry: {
+    getInstance: () => ({
+      inject: () => ({ getCatalog: jest.fn() }),
+    }),
+  },
+}));
+
+test('loads data', async () => {
+  // vague name; prefer should … — illustrative anti-pattern alongside mocked Registry
+  const { result } = renderHook(() => useCatalogListViewModel([2024]));
+  // Bypasses real register/clear lifecycle; breaks parity with production DI.
+});
+```
+
+**Correct (clear + register mocks; QueryClient without retries):**
+
+```tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook, waitFor } from '@testing-library/react-native';
+import { Registry } from '@/lib/registry/registry.lib';
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
+describe('useCatalogListViewModel', () => {
+  beforeEach(() => {
+    const r = Registry.getInstance();
+    r.clear();
+    r.register('catalogService', {
+      getCatalog: jest.fn().mockResolvedValue({ items: [] }),
+    });
+    r.register('catalogQueryKeys', {
+      catalogList: (y: number[]) => ['catalog', 'list', y],
+    });
+  });
+
+  afterEach(() => {
+    Registry.getInstance().clear();
+  });
+
+  it('should resolve the catalog list from the mocked service', async () => {
+    const { result } = renderHook(() => useCatalogListViewModel([2024]), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.data).toEqual({ items: [] });
+  });
+});
+```
+
+**Layering**
+
+- **Unit:** pure utils, mappers, validation — Jest.
+- **ViewModel:** `renderHook` + providers + Registry mocks — no production bootstrap import.
+- **Binder / screen:** `render` the component entry that connects ViewModel → View; assert user-visible behavior.
+
+Do not depend on real backend URLs in ViewModel tests. E2E stays out of scope until **[tests.md](../../../docs/front-end/tests.md)** documents a tool.
+
+Reference: [tests.md](../../../docs/front-end/tests.md) · [testing-anti-patterns.md](../../../docs/shared/testing-anti-patterns.md) · Skill: `.cursor/skills/front-end/react-native-test/SKILL.md`

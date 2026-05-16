@@ -1,0 +1,25 @@
+---
+description: tradeup-api Clean Architecture + DDD — layers, use cases, ports/adapters
+globs: tradeup-api/**/*.php
+alwaysApply: false
+---
+
+## Back-End — Clean Architecture & DDD (Laravel)
+
+When changing **tradeup-api**, follow [Back-End Architecture](../../../docs/back-end/architecture.md): **Domain** (entities, value objects, repository interfaces), **Application** (use cases, DTOs, orchestration), **Infrastructure** (Eloquent implementations, integrations, bindings), **Delivery** (routes, controllers, jobs — thin).
+
+**Do**
+
+- Add behavior as **use cases** under `app/Application/.../UseCases/`; controllers map HTTP → DTO → use case → response.
+- Define **repository (or port) interfaces** inward (`Domain` or `Application`); implement in `app/Infrastructure/...`.
+- Keep **domain** free of Eloquent, HTTP, and framework facades.
+
+**Don’t**
+
+- Put **business rules** only in controllers or FormRequests.
+- Use **Eloquent models as ubiquitous domain objects** across layers; map at the infrastructure edge when needed.
+- Call **`DB::`, `Http::`, filesystem** directly from use cases; inject an interface and implement in infrastructure.
+
+**Composition:** bind interfaces to implementations in service providers (composition root). Prefer naming use cases after **business intent** (`RegisterUser`), not framework roles.
+
+Reference: [docs/back-end/architecture.md](../../../docs/back-end/architecture.md) · [tests.md](../../../docs/back-end/tests.md) · [code-quality.md](../../../docs/back-end/code-quality.md)

@@ -1,0 +1,29 @@
+---
+description: SOLID, DIP, Pint, layer review checklist — tradeup-api PHP
+globs: tradeup-api/**/*.php
+alwaysApply: false
+---
+
+## Back-End — Code quality
+
+When changing **tradeup-api** PHP (non-test) code, follow **[docs/back-end/code-quality.md](../../../docs/back-end/code-quality.md)** together with **[docs/back-end/architecture.md](../../../docs/back-end/architecture.md)**.
+
+**SOLID (short)**
+
+- **SRP:** one use case per class; thin controllers; split god services.
+- **OCP:** extend via new **implementations** of ports, not giant conditionals.
+- **LSP:** honour interface contracts in all implementations.
+- **ISP:** small focused interfaces (`UserRepository`, `Clock`), not mega-ports.
+- **DIP:** domain/application depend on **abstractions**; Eloquent and facades stay in **infrastructure** / delivery.
+
+**Style**
+
+- Run **Laravel Pint** before PR; **declare types** on public APIs; prefer **readonly** where values are immutable.
+- Names reflect **ubiquitous language**, not generic `Manager`/`Helper`.
+
+**Don’t**
+
+- Import **Eloquent** or call **`DB::` / `Http::`** inside domain or use cases — use injected ports.
+- Encode **domain invariants** only in FormRequests — critical rules belong on **entities/value objects**.
+
+Reference: [docs/back-end/code-quality.md](../../../docs/back-end/code-quality.md)

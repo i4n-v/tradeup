@@ -1,0 +1,46 @@
+---
+description: React Native MVVM, Registry, screens/resources layout — high impact
+globs: tradeup-app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+## Front-End (React Native) — Architecture
+
+Follow **[docs/front-end/architecture.md](../../../docs/front-end/architecture.md)** for the full definition. Summary for agents:
+
+- **UI (MVVM):** Every screen/component uses **four files**: `*.model.ts`, `*.view-model.ts`, `*.view.tsx`, `*.component.tsx` (binder). The **View** only renders; the **ViewModel** is a hook with logic; the **binder** connects hook → view. **Do not** pass Services or `queryClient` through the binder — the ViewModel resolves them via **Registry** (`Registry.getInstance().inject(...)`).
+- **Placement:** Full screens live under **`src/screens/<feature>/`**. Reusable UI lives under **`src/components/<category>/...`** (no `pages/` or `shared/` folder). Navigation: **`src/routes/router.tsx`** plus **`src/routes/auth/*.route.tsx`** and **`src/routes/unauth/*.route.tsx`** (see doc for tree).
+- **Data:** **`src/resources/services/`** and **`src/resources/repositories/`** are siblings. **ViewModels never import repositories** — only Services. Services are classes with **constructor injection**; instances are **registered once** in bootstrap (`App.tsx`), **not** exported as module singletons for app use.
+- **Styling:** Use the project’s utility/class approach (e.g. `className` with NativeWind); do not introduce `StyleSheet` in new code unless the doc or codebase explicitly requires it.
+
+**Incorrect (Service passed from binder, View knows data source):**
+
+```tsx
+// binder — anti-pattern: injecting service via props
+export function SigninScreen({ authService }: { authService: AuthService }) {
+  const vm = useSigninViewModel({ authService })
+  return <SigninView {...vm} />
+}
+```
+
+**Correct (ViewModel uses Registry; binder only passes UI props):**
+
+```tsx
+// signin.view-model.ts
+export function useSigninViewModel() {
+  const registry = Registry.getInstance()
+  const authService = registry.inject('authService')
+  const mutation = useMutation({ mutationFn: (input) => authService.signin(input) })
+  return { /* … */ }
+}
+
+// signin.component.tsx
+export function SigninScreen(props: ISigninScreenProps) {
+  const vm = useSigninViewModel(/* only UI-related props if any */)
+  return <SigninView {...vm} />
+}
+```
+
+Related docs: [dependency-injection.md](../../../docs/front-end/dependency-injection.md) · [data-fetching.md](../../../docs/front-end/data-fetching.md) · [tests.md](../../../docs/front-end/tests.md)
+
+Reference: [Architecture — Front-End (React Native)](../../../docs/front-end/architecture.md)

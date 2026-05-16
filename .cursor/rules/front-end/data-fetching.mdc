@@ -1,0 +1,55 @@
+---
+description: React Query + Services + IHttpClient; no fetch in ViewModels
+globs: tradeup-app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+## Data Fetching — HttpClient, Services, React Query
+
+The UI never talks to HTTP or storage transport directly. The **ViewModel** resolves **Services** and **query key** helpers via **Registry** (`inject`), uses **React Query** (`useQuery` / `useMutation`), and keeps `queryFn` / `mutationFn` as thin calls into Service methods only. **Services** own REST (`IHttpClient`) and/or **`I*Repository`** plus **mappers**; they return **domain DTOs**. Query keys are **stable arrays** from a registered class per resource—not ad-hoc literals in every hook.
+
+**Incorrect (HTTP or literals in the ViewModel, skipping Service boundaries):**
+
+```tsx
+import { useQuery } from '@tanstack/react-query'
+
+export function useBadViewModel() {
+  const q = useQuery({
+    queryKey: ['catalog', 'list'],
+    queryFn: async () => {
+      const res = await fetch('/api/catalog')
+      return res.json()
+    },
+  })
+  return { data: q.data }
+}
+```
+
+**Correct (inject Service + query keys; `queryFn` only calls the Service):**
+
+```tsx
+import { useQuery } from '@tanstack/react-query'
+import { Registry } from '@/lib/registry/registry.lib'
+
+export function useCatalogListViewModel(selectedYears: number[]) {
+  const registry = Registry.getInstance()
+  const catalogQueryKeys = registry.inject('catalogQueryKeys')
+  const catalogService = registry.inject('catalogService')
+
+  const catalogQuery = useQuery({
+    queryKey: catalogQueryKeys.catalogList(selectedYears),
+    queryFn: () => catalogService.getCatalog({ year: selectedYears[0] }),
+  })
+
+  return {
+    data: catalogQuery.data,
+    isPending: catalogQuery.isPending,
+    refetch: catalogQuery.refetch,
+    error: catalogQuery.error,
+  }
+}
+```
+
+Supporting conventions (see **[data-fetching.md](../../../docs/front-end/data-fetching.md)**): **`IHttpClient`** only outside adapters in `lib/http-client/`; **Services** registered in bootstrap with constructor injection; **mappers** and **DTOs** under `resources/services/<domain>/`; **query key classes** registered and injected like Services.
+
+Reference: [data-fetching.md](../../../docs/front-end/data-fetching.md)

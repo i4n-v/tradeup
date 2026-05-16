@@ -1,0 +1,21 @@
+---
+description: Test real behavior, not mocks; no test-only production APIs
+globs: tradeup-app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+## Testing anti-patterns
+
+When writing or editing **tests** (or mocks) in the mobile app, follow **[docs/shared/testing-anti-patterns.md](../../../docs/shared/testing-anti-patterns.md)**.
+
+**Iron laws (short):**
+
+1. **Never** assert mock behavior as if it were product behavior.
+2. **Never** add test-only methods to production classes.
+3. **Never** mock without knowing the real dependency you are isolating.
+
+**Core principle:** Test what the code **does**, not what the **mocks** do. Prefer accessibility-oriented queries over test IDs when asserting UI.
+
+Cross-reference: **[docs/front-end/tests.md](../../../docs/front-end/tests.md)** · Registry tests: **[dependency-injection.md](../../../docs/front-end/dependency-injection.md)** (clear/register, do not `jest.mock` the Registry module).
+
+Reference: [testing-anti-patterns.md](../../../docs/shared/testing-anti-patterns.md)

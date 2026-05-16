@@ -1,0 +1,26 @@
+---
+description: Pest, test pyramid, fakes for use cases — tradeup-api
+globs: tradeup-api/**/*.php
+alwaysApply: false
+---
+
+## Back-End — Testing
+
+When writing or changing tests in **tradeup-api**, follow **[docs/back-end/tests.md](../../../docs/back-end/tests.md)** and **[docs/back-end/architecture.md](../../../docs/back-end/architecture.md)** (layer boundaries).
+
+**Do**
+
+- Name cases **`should …`**; assert **behaviour**, not mock trivia ([testing anti-patterns](../../../docs/shared/testing-anti-patterns.md)).
+- Test **domain** and **use cases** with **fakes** or in-memory repositories — no full Laravel boot for pure logic.
+- Use **`RefreshDatabase`** (or project trait) for **infrastructure** and **feature** tests that need the schema.
+- Prefer **HTTP feature tests** for delivery contracts; **unit tests** for orchestration inside use cases.
+
+**Don’t**
+
+- Put **business rules** only reachable through tests; production code must encode invariants.
+- Hit **real external APIs** in CI — `Http::fake()` or port + fake.
+- Use **heavy Mockery** everywhere when a **small fake class** keeps tests readable.
+
+Commands: `php artisan test` from `tradeup-api`.
+
+Reference: [docs/back-end/tests.md](../../../docs/back-end/tests.md) · Skill: `.cursor/skills/back-end/pest-laravel-test/SKILL.md`

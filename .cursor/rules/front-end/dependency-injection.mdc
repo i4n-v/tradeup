@@ -1,0 +1,16 @@
+---
+description: Registry DI, constructor injection for Services — MVVM bootstrap
+globs: tradeup-app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+## Dependency injection (Registry)
+
+Follow **[docs/front-end/dependency-injection.md](../../../docs/front-end/dependency-injection.md)**.
+
+- **ViewModels** resolve `Service`, query keys, and `queryClient` **only** via `Registry.getInstance().inject(...)` — do **not** pass these through the binder/props tree.
+- **Services** and adapters (`IHttpClient`, repositories) take dependencies in the **constructor**; **`App.tsx`** (or bootstrap) builds `new Service(...)` and **`register`**s instances.
+- **Do not** `jest.mock` the Registry module in tests — use `clear()` + `register()` (see [tests.md](../../../docs/front-end/tests.md)).
+- **Do not** use field decorators / `@Inject` — composition lives in bootstrap only.
+
+Reference: [dependency-injection.md](../../../docs/front-end/dependency-injection.md) · [architecture.md](../../../docs/front-end/architecture.md)
