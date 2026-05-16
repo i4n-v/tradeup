@@ -1,97 +1,65 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Trade Up App (`tradeup-app`)
 
-# Getting Started
+React Native client for Trade Up (Mini Binance flows: auth, dashboard, trade, history, profile).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Requirements
 
-## Step 1: Start Metro
+- **Node.js** and a package manager (e.g. npm)
+- **Mobile build tooling** for the platforms you target — see the official [React Native environment guide](https://reactnative.dev/docs/set-up-your-environment)
+- **Running API** when exercising real requests — configure the base URL via env (below)
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Stack
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- React Native
+- React
+- TypeScript
+- NativeWind
+- TanStack Query
+- react-hook-form
+- zod
+- `@hookform/resolvers`
+- zustand
+- Async Storage
+- Axios
+- Reanimated
 
-```sh
-# Using npm
+## Getting started
+
+From this directory:
+
+```bash
+cp .env.example .env
+npm install
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+Adjust values in `.env` using `.env.example` as reference (e.g. `API_BASE_URL` for the API host).
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+In another terminal:
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+```bash
 npm run ios
-
-# OR using Yarn
-yarn ios
+# or
+npm run android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+For the API and local backing services, see **[`../tradeup-api/README.md`](../tradeup-api/README.md)** and the root [`../docker-compose.yml`](../docker-compose.yml).
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Documentation references
 
-## Step 3: Modify your app
+| Topic | Location |
+|--------|-----------|
+| React Native (official) | [Environment setup](https://reactnative.dev/docs/set-up-your-environment), [Troubleshooting](https://reactnative.dev/docs/troubleshooting) |
+| Architecture (MVVM, Registry, layout) | [`../docs/front-end/architecture.md`](../docs/front-end/architecture.md) |
+| Dependency injection / Registry | [`../docs/front-end/dependency-injection.md`](../docs/front-end/dependency-injection.md) |
+| Data fetching | [`../docs/front-end/data-fetching.md`](../docs/front-end/data-fetching.md) |
+| Tests | [`../docs/front-end/tests.md`](../docs/front-end/tests.md) |
+| Visual mood board only (not feature spec) | [`../docs/front-end/visual-reference/`](../docs/front-end/visual-reference/) |
+| Shared testing notes | [`../docs/shared/testing-anti-patterns.md`](../docs/shared/testing-anti-patterns.md) |
 
-Now that you have successfully run the app, let's make changes!
+## Related in this repo
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+| Resource | Location |
+|----------|----------|
+| Monorepo overview | [`../README.md`](../README.md) |
+| API package (run & docs) | [`../tradeup-api/README.md`](../tradeup-api/README.md) |

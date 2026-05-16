@@ -1,0 +1,38 @@
+---
+description: Project Development Guidelines
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# trade-up Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-05-16
+
+## Active Technologies
+- PHP ^8.3, Laravel ^13 (**tradeup-api**); TypeScript / React Native (**tradeup-app**). (001-mini-binance-platform)
+- PostgreSQL (wallet, users, transactions, avatar files); Redis (cache, queues, Horizon). (001-mini-binance-platform)
+
+- (001-mini-binance-platform)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+# Add commands for 
+
+## Code Style
+
+: Follow standard conventions
+
+## Recent Changes
+- 001-mini-binance-platform: Added PHP ^8.3, Laravel ^13 (**tradeup-api**); TypeScript / React Native (**tradeup-app**).
+
+- 001-mini-binance-platform: Added
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

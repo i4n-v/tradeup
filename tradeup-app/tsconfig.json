@@ -2,6 +2,7 @@
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
       "baseUrl": ".",
+      "typeRoots": ["./node_modules/@types", "./types"],
       "paths": {
       "@/*": ["src/*"],
       "@decorators/*": ["src/decorators/*"],

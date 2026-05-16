@@ -1,0 +1,315 @@
+openapi: 3.1.0
+info:
+  title: Trade Up API — Mini Binance
+  version: 1.0.0
+  description: >
+    Target contract for the Mini Binance MVP. Monetary values are exposed as decimal strings
+    in JSON to preserve scale (BRL 2dp, BTC 8dp, price 2dp).
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local (php artisan serve)
+security:
+  - sanctum: []
+paths:
+  /auth/register:
+    post:
+      summary: Register user and create initial wallet
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/login:
+    post:
+      summary: Login (token Sanctum)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/logout:
+    post:
+      summary: Revoke current token
+      responses:
+        '204':
+          description: No Content
+  /me:
+    get:
+      summary: Authenticated user profile
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+  /dashboard:
+    get:
+      summary: Balances + latest quote for home screen
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+  /trades/buy:
+    post:
+      summary: Buy BTC with BRL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuyRequest'
+      responses:
+        '200':
+          description: Trade executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /trades/sell:
+    post:
+      summary: Sell BTC for BRL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellRequest'
+      responses:
+        '200':
+          description: Trade executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /transactions:
+    get:
+      summary: User transaction history (newest first)
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Optional pagination cursor (convention TBD in implementation)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+  /profile:
+    patch:
+      summary: Update name (email immutable in v1)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+  /profile/avatar:
+    post:
+      summary: Upload avatar (multipart)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl:
+                    type: string
+                    format: uri
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+  schemas:
+    ErrorBody:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        password_confirmation:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    DashboardResponse:
+      type: object
+      properties:
+        brlBalance:
+          type: string
+          example: '10000.00'
+        btcBalance:
+          type: string
+          example: '0.00000000'
+        btcPriceBrl:
+          type: string
+          description: Current BRL price per 1 BTC (2dp, within allowed band)
+          example: '250000.00'
+    BuyRequest:
+      type: object
+      required: [amountBrl]
+      properties:
+        amountBrl:
+          type: string
+          description: BRL amount to spend (2dp)
+          example: '100.00'
+    SellRequest:
+      type: object
+      required: [amountBtc]
+      properties:
+        amountBtc:
+          type: string
+          description: BTC amount to sell (up to 8dp)
+          example: '0.01000000'
+    TradeResponse:
+      type: object
+      properties:
+        transaction:
+          $ref: '#/components/schemas/Transaction'
+        wallet:
+          type: object
+          properties:
+            brlBalance:
+              type: string
+            btcBalance:
+              type: string
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [BUY, SELL]
+        btcAmount:
+          type: string
+        brlAmount:
+          type: string
+        btcPriceBrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    TransactionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'

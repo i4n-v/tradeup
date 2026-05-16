@@ -35,6 +35,9 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Env (keep .env.example in repo)
+.env
+
 # node.js
 #
 node_modules/
