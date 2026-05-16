@@ -100,6 +100,18 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+## Non-Functional Requirements *(mandatory when UI, auth, data, or network behavior changes)*
+
+<!--
+  Align with `.specify/memory/constitution.md` (performance, security, accessibility, mobile UX).
+  Omit items only when explicitly out of scope with rationale in Assumptions.
+-->
+
+- **NFR-001**: Performance targets [e.g., p95 API latency, frame budget, offline tolerance, bundle impact or NEEDS CLARIFICATION]
+- **NFR-002**: Security & privacy controls [e.g., token storage, PII minimization, logging redaction or NEEDS CLARIFICATION]
+- **NFR-003**: Accessibility [e.g., screen reader labels, contrast, dynamic type, reduced motion or NEEDS CLARIFICATION]
+- **NFR-004**: Mobile UX states [loading/empty/error, haptics, destructive confirmations or NEEDS CLARIFICATION]
+
 ## Success Criteria *(mandatory)*
 
 <!--
