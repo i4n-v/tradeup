@@ -29,10 +29,12 @@ class TransactionController extends Controller
             'data' => array_map(fn ($tx) => [
                 'id' => $tx->id(),
                 'type' => $tx->type()->value,
+                'status' => $tx->status()->value,
                 'btcAmount' => $tx->btcAmount(),
                 'brlAmount' => $tx->brlAmount(),
                 'btcPriceBrl' => $tx->btcPriceBrl(),
                 'createdAt' => $tx->createdAt()->format('Y-m-d\TH:i:s\Z'),
+                'failureReason' => $tx->failureReason()?->value,
             ], $result->items),
             'meta' => [
                 'page' => $result->page,
