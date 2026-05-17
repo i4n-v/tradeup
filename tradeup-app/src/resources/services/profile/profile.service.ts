@@ -30,7 +30,9 @@ export class ProfileService {
   async uploadAvatar(file: IAvatarUploadInput): Promise<string> {
     const formData = new FormData();
     formData.append('avatar', { uri: file.uri, type: file.type, name: file.name } as any);
-    const res = await this.httpClient.post<IAvatarUploadResponseDTO>('/profile/avatar', formData);
+    const res = await this.httpClient.post<IAvatarUploadResponseDTO>('/profile/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return this.normalizeAvatarUrl(res.avatarUrl) ?? res.avatarUrl;
   }
 }
