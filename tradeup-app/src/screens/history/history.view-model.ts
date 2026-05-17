@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@hooks/use-query/use-query.hook';
 
 import { Registry } from '@lib/registry/registry.lib';
 

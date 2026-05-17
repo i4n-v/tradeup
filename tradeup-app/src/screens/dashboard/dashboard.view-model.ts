@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@hooks/use-query/use-query.hook';
 
 import { Registry } from '@lib/registry/registry.lib';
 import type { IAuthTabParamList } from '@/routes/navigation.types';
