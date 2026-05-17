@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { cn } from '@/lib/utils/cn/cn.util';
+import { cn } from '@/utils/cn/cn.util';
 import { buttonTextVariants } from '../../button.variants';
 
 import type { IButtonTextProps, IButtonTextViewProps } from './button-text.model';

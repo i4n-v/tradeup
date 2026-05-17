@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { cn } from '@/lib/utils/cn/cn.util';
+import { cn } from '@/utils/cn/cn.util';
 import { PT_BR } from '@/i18n/pt-BR';
 
 import type { IBadgeType, IBadgeProps, IBadgeViewProps } from './badge.model';

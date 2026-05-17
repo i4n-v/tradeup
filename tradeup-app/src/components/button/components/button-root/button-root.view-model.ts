@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { cn } from '@/lib/utils/cn/cn.util';
+import { cn } from '@/utils/cn/cn.util';
 import { buttonVariants } from '../../button.variants';
 
 import type { IButtonRootProps, IButtonRootViewProps } from './button-root.model';

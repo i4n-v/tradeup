@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { cn } from '@/lib/utils/cn/cn.util';
+import { cn } from '@/utils/cn/cn.util';
 import { cardBodyVariants } from '../../card.variants';
 
 import type { ICardBodyProps } from './card-body.model';
