@@ -3,6 +3,8 @@
 namespace App\Domain\Trading\Entities;
 
 use App\Domain\Trading\ValueObjects\TradeType;
+use App\Domain\Trading\ValueObjects\TransactionFailureReason;
+use App\Domain\Trading\ValueObjects\TransactionStatus;
 use DateTimeImmutable;
 
 final class Transaction
@@ -11,27 +13,39 @@ final class Transaction
         private readonly ?int $id,
         private readonly int $userId,
         private readonly TradeType $type,
-        private readonly string $btcAmount,
-        private readonly string $brlAmount,
-        private readonly string $btcPriceBrl,
+        private string $btcAmount,
+        private string $brlAmount,
+        private string $btcPriceBrl,
         private readonly DateTimeImmutable $createdAt,
+        private TransactionStatus $status,
+        private ?TransactionFailureReason $failureReason = null,
     ) {}
 
-    public static function record(
-        int $userId,
-        TradeType $type,
-        string $btcAmount,
-        string $brlAmount,
-        string $btcPriceBrl,
-    ): self {
+    public static function pendingBuy(int $userId, string $brlAmount): self
+    {
         return new self(
             id: null,
             userId: $userId,
-            type: $type,
-            btcAmount: $btcAmount,
+            type: TradeType::Buy,
+            btcAmount: '0.00000000',
             brlAmount: $brlAmount,
-            btcPriceBrl: $btcPriceBrl,
+            btcPriceBrl: '0.00',
             createdAt: new DateTimeImmutable,
+            status: TransactionStatus::Pending,
+        );
+    }
+
+    public static function pendingSell(int $userId, string $btcAmount): self
+    {
+        return new self(
+            id: null,
+            userId: $userId,
+            type: TradeType::Sell,
+            btcAmount: $btcAmount,
+            brlAmount: '0.00',
+            btcPriceBrl: '0.00',
+            createdAt: new DateTimeImmutable,
+            status: TransactionStatus::Pending,
         );
     }
 
@@ -43,6 +57,8 @@ final class Transaction
         string $brlAmount,
         string $btcPriceBrl,
         DateTimeImmutable $createdAt,
+        TransactionStatus $status,
+        ?TransactionFailureReason $failureReason = null,
     ): self {
         return new self(
             id: $id,
@@ -52,7 +68,24 @@ final class Transaction
             brlAmount: $brlAmount,
             btcPriceBrl: $btcPriceBrl,
             createdAt: $createdAt,
+            status: $status,
+            failureReason: $failureReason,
         );
+    }
+
+    public function complete(string $btcAmount, string $brlAmount, string $btcPriceBrl): void
+    {
+        $this->btcAmount = $btcAmount;
+        $this->brlAmount = $brlAmount;
+        $this->btcPriceBrl = $btcPriceBrl;
+        $this->status = TransactionStatus::Completed;
+        $this->failureReason = null;
+    }
+
+    public function fail(TransactionFailureReason $reason = TransactionFailureReason::Unknown): void
+    {
+        $this->status = TransactionStatus::Failed;
+        $this->failureReason = $reason;
     }
 
     public function id(): ?int
@@ -88,5 +121,15 @@ final class Transaction
     public function createdAt(): DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function status(): TransactionStatus
+    {
+        return $this->status;
+    }
+
+    public function failureReason(): ?TransactionFailureReason
+    {
+        return $this->failureReason;
     }
 }
