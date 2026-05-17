@@ -6,6 +6,6 @@ final readonly class BuyBtcInput
 {
     public function __construct(
         public int $userId,
-        public string $amountBrl,
+        public int $transactionId,
     ) {}
 }
