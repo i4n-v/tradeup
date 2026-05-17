@@ -16,7 +16,8 @@ export interface IBuyTradeViewProps {
   isPending: boolean;
   btcPriceBrl: string | null;
   estimatedBtc: string;
-  onSellPress: () => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
 export { buySchema };

@@ -20,11 +20,6 @@ function createWrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  client.setQueryData(['dashboard'], {
-    brlBalance: '10000',
-    btcBalance: '0.5',
-    btcPriceBrl: '250000.00',
-  });
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(QueryClientProvider, { client }, children);
   };
@@ -32,6 +27,13 @@ function createWrapper() {
 
 const mockTradeService = { sell: jest.fn() };
 const mockDashboardQueryKeys = { dashboard: () => ['dashboard'] as const };
+const mockDashboardService = {
+  getDashboard: jest.fn().mockResolvedValue({
+    brlBalance: '10000.00',
+    btcBalance: '0.5',
+    btcPriceBrl: '250000.00',
+  }),
+};
 
 describe('useSellTradeViewModel', () => {
   let alertSpy: jest.SpyInstance;
@@ -41,7 +43,9 @@ describe('useSellTradeViewModel', () => {
     registry.clear();
     registry.register('tradeService', mockTradeService as any);
     registry.register('dashboardQueryKeys', mockDashboardQueryKeys as any);
+    registry.register('dashboardService', mockDashboardService as any);
     mockTradeService.sell.mockClear();
+    mockDashboardService.getDashboard.mockClear();
 
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
       const confirmButton = buttons?.find((b) => b.style !== 'cancel');
@@ -80,7 +84,7 @@ describe('useSellTradeViewModel', () => {
     });
 
     await waitFor(() => {
-      expect(mockTradeService.sell).toHaveBeenCalledWith({ amountBtc: '0.01' });
+      expect(mockTradeService.sell).toHaveBeenCalledWith({ amountBtc: '0.01000000' });
     });
   });
 });

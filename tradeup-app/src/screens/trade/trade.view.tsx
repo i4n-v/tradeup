@@ -1,61 +1,38 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { cn } from '@/lib/utils/cn/cn.util';
 import { PT_BR } from '@/i18n/pt-BR';
+import { SegmentedControl } from '@/components/segmented-control/segmented-control.component';
 
 import { BuyTradeScreen } from '../buy-trade/buy-trade.component';
 import { SellTradeScreen } from '../sell-trade/sell-trade.component';
+import { ConvertTradeScreen } from '../convert-trade/convert-trade.component';
 
-import type { ITradeViewProps } from './trade.model';
+import type { ITradeTab, ITradeViewProps } from './trade.model';
 
-function TradeView({ activeTab, onSelectBuy, onSelectSell }: ITradeViewProps) {
+const TRADE_TABS = [
+  { key: 'buy' as ITradeTab, label: PT_BR.trade.tabBuy },
+  { key: 'sell' as ITradeTab, label: PT_BR.trade.tabSell },
+  { key: 'convert' as ITradeTab, label: PT_BR.trade.tabConvert },
+];
+
+function TradeView({ activeTab, onSelectTab }: ITradeViewProps) {
   return (
-    <View className="flex-1 bg-base-50">
-      <View className="flex-row bg-base-0 mx-4 mt-4 rounded-full p-1 border border-base-200">
-        <Pressable
-          className={cn(
-            'flex-1 py-2 rounded-full items-center',
-            activeTab === 'buy' ? 'bg-primary-400' : 'bg-transparent',
-          )}
-          onPress={onSelectBuy}
-          accessibilityRole="button"
-          accessibilityLabel={PT_BR.dashboard.buy}
-          accessibilityState={{ selected: activeTab === 'buy' }}
-        >
-          <Text
-            className={cn(
-              'font-primary-semibold text-sm',
-              activeTab === 'buy' ? 'text-base-900' : 'text-base-500',
-            )}
-          >
-            {PT_BR.dashboard.buy}
-          </Text>
-        </Pressable>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <SegmentedControl
+        items={TRADE_TABS}
+        value={activeTab}
+        onChange={(key) => onSelectTab(key as ITradeTab)}
+        className="mx-3 mt-2 mb-1"
+      />
 
-        <Pressable
-          className={cn(
-            'flex-1 py-2 rounded-full items-center',
-            activeTab === 'sell' ? 'bg-primary-400' : 'bg-transparent',
-          )}
-          onPress={onSelectSell}
-          accessibilityRole="button"
-          accessibilityLabel={PT_BR.dashboard.sell}
-          accessibilityState={{ selected: activeTab === 'sell' }}
-        >
-          <Text
-            className={cn(
-              'font-primary-semibold text-sm',
-              activeTab === 'sell' ? 'text-base-900' : 'text-base-500',
-            )}
-          >
-            {PT_BR.dashboard.sell}
-          </Text>
-        </Pressable>
+      <View className="flex-1">
+        {activeTab === 'buy' ? <BuyTradeScreen /> : null}
+        {activeTab === 'sell' ? <SellTradeScreen /> : null}
+        {activeTab === 'convert' ? <ConvertTradeScreen /> : null}
       </View>
-
-      {activeTab === 'buy' ? <BuyTradeScreen /> : <SellTradeScreen />}
-    </View>
+    </SafeAreaView>
   );
 }
 

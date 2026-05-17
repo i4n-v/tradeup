@@ -1,9 +1,8 @@
-type ITradeTab = 'buy' | 'sell';
+type ITradeTab = 'buy' | 'sell' | 'convert';
 
 interface ITradeViewProps {
   activeTab: ITradeTab;
-  onSelectBuy: () => void;
-  onSelectSell: () => void;
+  onSelectTab: (tab: ITradeTab) => void;
 }
 
 export type { ITradeTab, ITradeViewProps };

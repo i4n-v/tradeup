@@ -26,8 +26,8 @@ function useDashboardViewModel(): IDashboardViewProps {
     isError,
     isRefetching,
     refetch,
-    onBuyPress: () => navigation.navigate('BuyTrade'),
-    onSellPress: () => navigation.navigate('BuyTrade'),
+    onBuyPress: () => navigation.navigate('Trade', { initialTab: 'buy' }),
+    onSellPress: () => navigation.navigate('Trade', { initialTab: 'sell' }),
   };
 }
 

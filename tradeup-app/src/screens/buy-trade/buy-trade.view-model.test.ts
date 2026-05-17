@@ -27,6 +27,13 @@ function createWrapper() {
 
 const mockTradeService = { buy: jest.fn() };
 const mockDashboardQueryKeys = { dashboard: () => ['dashboard'] };
+const mockDashboardService = {
+  getDashboard: jest.fn().mockResolvedValue({
+    brlBalance: '10000.00',
+    btcBalance: '0',
+    btcPriceBrl: '250000.00',
+  }),
+};
 
 describe('useBuyTradeViewModel', () => {
   let alertSpy: jest.SpyInstance;
@@ -36,7 +43,9 @@ describe('useBuyTradeViewModel', () => {
     registry.clear();
     registry.register('tradeService', mockTradeService as any);
     registry.register('dashboardQueryKeys', mockDashboardQueryKeys as any);
+    registry.register('dashboardService', mockDashboardService as any);
     mockTradeService.buy.mockClear();
+    mockDashboardService.getDashboard.mockClear();
 
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
       const confirmButton = buttons?.find((b) => b.style !== 'cancel');

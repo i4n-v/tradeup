@@ -1,38 +1,38 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Alert } from 'react-native';
 
 import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
 import type { IDashboardDomainDTO } from '@/resources/services/dashboard/dtos/dashboard.domain.dto';
-import type { IAuthTabParamList } from '@/routes/navigation.types';
 import { PT_BR } from '@/i18n/pt-BR';
 
 import { buySchema, type IBuyFormValues, type IBuyTradeViewProps } from './buy-trade.model';
 
 function useBuyTradeViewModel(): IBuyTradeViewProps {
   const queryClient = useQueryClient();
-  const navigation = useNavigation<BottomTabNavigationProp<IAuthTabParamList>>();
   const tradeService = Registry.getInstance().inject('tradeService');
+  const dashboardService = Registry.getInstance().inject('dashboardService');
   const dashboardQueryKeys = Registry.getInstance().inject('dashboardQueryKeys');
+
+  const { data: dashboard, refetch, isFetching } = useQuery({
+    queryKey: dashboardQueryKeys.dashboard(),
+    queryFn: () => dashboardService.getDashboard(),
+    staleTime: 30_000,
+  });
+
+  const currentPrice = dashboard?.btcPriceBrl ?? null;
 
   const form = useForm<IBuyFormValues>({
     defaultValues: { amountBrl: '' },
     resolver: zodResolver(buySchema),
   });
 
-  const currentPrice =
-    (queryClient.getQueryData<IDashboardDomainDTO>(
-      dashboardQueryKeys.dashboard(),
-    ) as IDashboardDomainDTO | undefined)?.btcPriceBrl ?? null;
-
   const amountBrl = form.watch('amountBrl');
   const estimatedBtc =
     currentPrice && amountBrl
-      ? (parseFloat(amountBrl) / parseFloat(currentPrice)).toFixed(8)
+      ? (Number.parseFloat(amountBrl) / Number.parseFloat(currentPrice)).toFixed(8)
       : '0.00000000';
 
   const mutation = useMutation({
@@ -42,12 +42,15 @@ function useBuyTradeViewModel(): IBuyTradeViewProps {
       const snapshot = queryClient.getQueryData<IDashboardDomainDTO>(
         dashboardQueryKeys.dashboard(),
       );
-      if (snapshot && currentPrice) {
-        const btcGain = (parseFloat(data.amountBrl) / parseFloat(currentPrice)).toFixed(8);
+      const price = currentPrice;
+      if (snapshot && price) {
+        const btcGain = (Number.parseFloat(data.amountBrl) / Number.parseFloat(price)).toFixed(8);
         queryClient.setQueryData(dashboardQueryKeys.dashboard(), {
           ...snapshot,
-          brlBalance: (parseFloat(snapshot.brlBalance) - parseFloat(data.amountBrl)).toFixed(2),
-          btcBalance: (parseFloat(snapshot.btcBalance) + parseFloat(btcGain)).toFixed(8),
+          brlBalance: (Number.parseFloat(snapshot.brlBalance) - Number.parseFloat(data.amountBrl)).toFixed(
+            2,
+          ),
+          btcBalance: (Number.parseFloat(snapshot.btcBalance) + Number.parseFloat(btcGain)).toFixed(8),
         });
       }
       return { snapshot };
@@ -65,14 +68,14 @@ function useBuyTradeViewModel(): IBuyTradeViewProps {
   });
 
   const onSubmit = form.handleSubmit((data) => {
-    Alert.alert(
-      PT_BR.trade.confirmBuyTitle,
-      `Comprar ${estimatedBtc} BTC por R$ ${data.amountBrl}?`,
-      [
-        { text: PT_BR.trade.cancel, style: 'cancel' },
-        { text: PT_BR.trade.confirm, onPress: () => mutation.mutate(data) },
-      ],
-    );
+    const brlFmt = Number.parseFloat(data.amountBrl).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    Alert.alert(PT_BR.trade.confirmBuyTitle, `Comprar ${estimatedBtc} BTC por R$ ${brlFmt}?`, [
+      { text: PT_BR.trade.cancel, style: 'cancel' },
+      { text: PT_BR.trade.confirm, onPress: () => mutation.mutate(data) },
+    ]);
   });
 
   return {
@@ -81,7 +84,10 @@ function useBuyTradeViewModel(): IBuyTradeViewProps {
     isPending: mutation.isPending,
     btcPriceBrl: currentPrice,
     estimatedBtc,
-    onSellPress: () => navigation.navigate('BuyTrade'),
+    onRefresh: () => {
+      void refetch();
+    },
+    isRefreshing: isFetching,
   };
 }
 
