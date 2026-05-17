@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Control, FieldValues, Path } from 'react-hook-form';
 
+import type { IMask } from '@/utils/money/money.util';
+
 interface ITextFieldProps<T extends FieldValues> {
   name: Path<T>;
   control: Control<T>;
@@ -16,6 +18,8 @@ interface ITextFieldProps<T extends FieldValues> {
   autoCorrect?: boolean;
   editable?: boolean;
   className?: string;
+  /** Máscara de formatação: `mask` converte canônico → display; `unmask` converte entrada → canônico. */
+  mask?: IMask;
 }
 
 interface ITextFieldViewProps<T extends FieldValues> extends ITextFieldProps<T> {
