@@ -1,6 +1,7 @@
 module.exports = {
   presets: ['module:@react-native/babel-preset', 'nativewind/babel'],
   plugins: [
+    '@babel/plugin-transform-export-namespace-from',
     ['@babel/plugin-proposal-decorators', { version: '2023-11' }],
     ['module:react-native-dotenv'],
     [
