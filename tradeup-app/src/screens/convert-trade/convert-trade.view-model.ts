@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@hooks/use-query/use-query.hook';
 import { useForm } from 'react-hook-form';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
-import type { IDashboardDomainDTO } from '@/resources/services/dashboard/dtos/dashboard.domain.dto';
 import { PT_BR } from '@/i18n/pt-BR';
+import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 
 import {
   convertSchema,
@@ -57,30 +58,11 @@ function useConvertTradeViewModel(): IConvertTradeViewProps {
 
   const buyMutation = useMutation({
     mutationFn: (amountBrl: string) => tradeService.buy({ amountBrl }),
-    onMutate: async (amountBrl) => {
-      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.dashboard() });
-      const snapshot = queryClient.getQueryData<IDashboardDomainDTO>(
-        dashboardQueryKeys.dashboard(),
-      );
-      const price = currentPrice;
-      if (snapshot && price) {
-        const btcGain = (Number.parseFloat(amountBrl) / Number.parseFloat(price)).toFixed(8);
-        queryClient.setQueryData(dashboardQueryKeys.dashboard(), {
-          ...snapshot,
-          brlBalance: (Number.parseFloat(snapshot.brlBalance) - Number.parseFloat(amountBrl)).toFixed(
-            2,
-          ),
-          btcBalance: (Number.parseFloat(snapshot.btcBalance) + Number.parseFloat(btcGain)).toFixed(8),
-        });
-      }
-      return { snapshot };
-    },
-    onError: (_, __, ctx) => {
-      if (ctx?.snapshot) queryClient.setQueryData(dashboardQueryKeys.dashboard(), ctx.snapshot);
-      toast.error(PT_BR.trade.error.generic);
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, PT_BR.trade.error.generic));
     },
     onSuccess: () => {
-      toast.success(PT_BR.trade.success.buy);
+      toast.success(PT_BR.trade.processing);
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.dashboard() });
       queryClient.invalidateQueries({ queryKey: ['history'] });
       form.reset();
@@ -89,30 +71,11 @@ function useConvertTradeViewModel(): IConvertTradeViewProps {
 
   const sellMutation = useMutation({
     mutationFn: (amountBtc: string) => tradeService.sell({ amountBtc }),
-    onMutate: async (amountBtcRaw) => {
-      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.dashboard() });
-      const snapshot = queryClient.getQueryData<IDashboardDomainDTO>(
-        dashboardQueryKeys.dashboard(),
-      );
-      const price = currentPrice;
-      if (snapshot && price) {
-        const brlGain = (Number.parseFloat(amountBtcRaw) * Number.parseFloat(price)).toFixed(2);
-        queryClient.setQueryData(dashboardQueryKeys.dashboard(), {
-          ...snapshot,
-          btcBalance: (Number.parseFloat(snapshot.btcBalance) - Number.parseFloat(amountBtcRaw)).toFixed(
-            8,
-          ),
-          brlBalance: (Number.parseFloat(snapshot.brlBalance) + Number.parseFloat(brlGain)).toFixed(2),
-        });
-      }
-      return { snapshot };
-    },
-    onError: (_, __, ctx) => {
-      if (ctx?.snapshot) queryClient.setQueryData(dashboardQueryKeys.dashboard(), ctx.snapshot);
-      toast.error(PT_BR.trade.error.generic);
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, PT_BR.trade.error.generic));
     },
     onSuccess: () => {
-      toast.success(PT_BR.trade.success.sell);
+      toast.success(PT_BR.trade.processing);
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.dashboard() });
       queryClient.invalidateQueries({ queryKey: ['history'] });
       form.reset();

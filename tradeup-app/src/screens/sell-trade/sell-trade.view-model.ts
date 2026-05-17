@@ -1,11 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@hooks/use-query/use-query.hook';
 import { useForm } from 'react-hook-form';
 import { Alert } from 'react-native';
 
 import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
-import type { IDashboardDomainDTO } from '@/resources/services/dashboard/dtos/dashboard.domain.dto';
 import { PT_BR } from '@/i18n/pt-BR';
 import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 
@@ -43,29 +43,11 @@ function useSellTradeViewModel(): ISellTradeViewProps {
       const normalized = Number.parseFloat(data.amountBtc.replace(/\.$/, '')).toFixed(8);
       return tradeService.sell({ amountBtc: normalized });
     },
-    onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.dashboard() });
-      const snapshot = queryClient.getQueryData<IDashboardDomainDTO>(
-        dashboardQueryKeys.dashboard(),
-      );
-      const price = currentPrice;
-      const amount = Number.parseFloat(data.amountBtc.replace(/\.$/, '')).toFixed(8);
-      if (snapshot && price) {
-        const brlGain = (Number.parseFloat(amount) * Number.parseFloat(price)).toFixed(2);
-        queryClient.setQueryData(dashboardQueryKeys.dashboard(), {
-          ...snapshot,
-          btcBalance: (Number.parseFloat(snapshot.btcBalance) - Number.parseFloat(amount)).toFixed(8),
-          brlBalance: (Number.parseFloat(snapshot.brlBalance) + Number.parseFloat(brlGain)).toFixed(2),
-        });
-      }
-      return { snapshot };
-    },
-    onError: (error, _, ctx) => {
-      if (ctx?.snapshot) queryClient.setQueryData(dashboardQueryKeys.dashboard(), ctx.snapshot);
+    onError: (error) => {
       toast.error(getApiErrorMessage(error, PT_BR.trade.error.generic));
     },
     onSuccess: () => {
-      toast.success(PT_BR.trade.success.sell);
+      toast.success(PT_BR.trade.processing);
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.dashboard() });
       queryClient.invalidateQueries({ queryKey: ['history'] });
       form.reset();

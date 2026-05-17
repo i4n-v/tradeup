@@ -63,12 +63,12 @@ describe('useSellTradeViewModel', () => {
       transaction: {
         id: '1',
         type: 'SELL',
-        btcAmount: '0.01',
-        brlAmount: '2500.00',
-        btcPriceBrl: '250000.00',
+        status: 'PENDING',
+        btcAmount: '0.01000000',
+        brlAmount: '0.00',
+        btcPriceBrl: '0.00',
         createdAt: '',
       },
-      wallet: { brlBalance: '12500.00', btcBalance: '0.49' },
     });
 
     const { result } = renderHook(() => useSellTradeViewModel(), {

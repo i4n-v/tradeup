@@ -1,11 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@hooks/use-query/use-query.hook';
 import { useForm } from 'react-hook-form';
 import { Alert } from 'react-native';
 
 import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
-import type { IDashboardDomainDTO } from '@/resources/services/dashboard/dtos/dashboard.domain.dto';
 import { PT_BR } from '@/i18n/pt-BR';
 import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 
@@ -38,30 +38,11 @@ function useBuyTradeViewModel(): IBuyTradeViewProps {
 
   const mutation = useMutation({
     mutationFn: (data: IBuyFormValues) => tradeService.buy({ amountBrl: data.amountBrl }),
-    onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.dashboard() });
-      const snapshot = queryClient.getQueryData<IDashboardDomainDTO>(
-        dashboardQueryKeys.dashboard(),
-      );
-      const price = currentPrice;
-      if (snapshot && price) {
-        const btcGain = (Number.parseFloat(data.amountBrl) / Number.parseFloat(price)).toFixed(8);
-        queryClient.setQueryData(dashboardQueryKeys.dashboard(), {
-          ...snapshot,
-          brlBalance: (Number.parseFloat(snapshot.brlBalance) - Number.parseFloat(data.amountBrl)).toFixed(
-            2,
-          ),
-          btcBalance: (Number.parseFloat(snapshot.btcBalance) + Number.parseFloat(btcGain)).toFixed(8),
-        });
-      }
-      return { snapshot };
-    },
-    onError: (error, _, ctx) => {
-      if (ctx?.snapshot) queryClient.setQueryData(dashboardQueryKeys.dashboard(), ctx.snapshot);
+    onError: (error) => {
       toast.error(getApiErrorMessage(error, PT_BR.trade.error.generic));
     },
     onSuccess: () => {
-      toast.success(PT_BR.trade.success.buy);
+      toast.success(PT_BR.trade.processing);
       queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.dashboard() });
       queryClient.invalidateQueries({ queryKey: ['history'] });
       form.reset();
