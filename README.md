@@ -11,14 +11,6 @@ The first end-to-end slice is a **Mini Binance–style learning stack** (BRL/BTC
 | **[`tradeup-api/`](./tradeup-api/)** | Backend API (see package README). |
 | **[`tradeup-app/`](./tradeup-app/)** | Mobile client (see package README). |
 
-## Local infrastructure
-
-Services used for local development are defined at the repo root:
-
-```bash
-docker compose up -d
-```
-
 ## Package READMEs (requirements & how to run)
 
 - **[`tradeup-api/README.md`](./tradeup-api/README.md)** — API prerequisites, startup, and links to back-end architecture docs.  

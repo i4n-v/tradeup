@@ -43,7 +43,7 @@ npm run ios
 npm run android
 ```
 
-For the API and local backing services, see **[`../tradeup-api/README.md`](../tradeup-api/README.md)** and the root [`../docker-compose.yml`](../docker-compose.yml).
+For the API and local backing services, see **[`../tradeup-api/README.md`](../tradeup-api/README.md)** — Postgres and Redis are defined in [`../tradeup-api/docker-compose.yml`](../tradeup-api/docker-compose.yml).
 
 ## Documentation references
 

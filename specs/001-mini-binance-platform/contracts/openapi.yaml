@@ -5,6 +5,16 @@ info:
   description: >
     Target contract for the Mini Binance MVP. Monetary values are exposed as decimal strings
     in JSON to preserve scale (BRL 2dp, BTC 8dp, price 2dp).
+
+    BUY/SELL respond with **HTTP 202** and a **`PENDING`** transaction; the queue worker settles
+    the trade (**`COMPLETED`** or **`FAILED`**). Run `composer run dev` (or `php artisan queue:work`)
+    locally so jobs are processed.
+
+    Balance sufficiency (BRL buy / BTC sell) is validated **before** enqueue; **HTTP 422** returns
+    **`message`** and creates **no** transaction row.
+
+    Insufficient funds: **422** with **no** row (precheck); race conditions may **`FAIL`** post-enqueue.
+
 servers:
   - url: http://localhost:8000/api/v1
     description: Local (php artisan serve)
@@ -77,7 +87,10 @@ paths:
                 $ref: '#/components/schemas/DashboardResponse'
   /trades/buy:
     post:
-      summary: Buy BTC with BRL
+      summary: Buy BTC with BRL (async settlement)
+      description: >
+        Returns **202** with **`status: PENDING`**. Settlement runs via queue worker (**`composer run dev`**
+        locally). **Insufficient BRL**: **422** with **`message`**; **no** transaction row created.
       requestBody:
         required: true
         content:
@@ -85,17 +98,24 @@ paths:
             schema:
               $ref: '#/components/schemas/BuyRequest'
       responses:
-        '200':
-          description: Trade executed
+        '202':
+          description: Trade accepted — **`PENDING`** until worker settles
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TradeResponse'
+                $ref: '#/components/schemas/TradeAcceptedResponse'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: Validation, insufficient funds, invalid amount (no transaction row persisted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
   /trades/sell:
     post:
-      summary: Sell BTC for BRL
+      summary: Sell BTC for BRL (async settlement)
+      description: >
+        Returns **202** with **`status: PENDING`**. **Insufficient BTC**: **422** with **`message`**;
+        **no** transaction row created.
       requestBody:
         required: true
         content:
@@ -103,14 +123,18 @@ paths:
             schema:
               $ref: '#/components/schemas/SellRequest'
       responses:
-        '200':
-          description: Trade executed
+        '202':
+          description: Trade accepted — **`PENDING`** until worker settles
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TradeResponse'
+                $ref: '#/components/schemas/TradeAcceptedResponse'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: Validation, insufficient funds, invalid amount (no transaction row persisted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
   /transactions:
     get:
       summary: User transaction history (newest first)
@@ -292,40 +316,52 @@ components:
           type: string
           description: BTC amount to sell (up to 8dp string)
           example: '0.01000000'
-    TradeResponse:
-      type: object
-      properties:
-        transaction:
-          $ref: '#/components/schemas/Transaction'
-        wallet:
-          type: object
-          properties:
-            brlBalance:
-              type: string
-              description: Updated BRL balance (2dp string)
-            btcBalance:
-              type: string
-              description: Updated BTC balance (8dp string)
+    TransactionStatus:
+      type: string
+      enum: [PENDING, COMPLETED, FAILED]
+    TransactionFailureReason:
+      type: string
+      description: Present when status is FAILED; mapped to UX in the mobile client
+      enum:
+        - INSUFFICIENT_BRL_FUNDS
+        - INSUFFICIENT_BTC_FUNDS
+        - QUOTE_UNAVAILABLE
+        - ZERO_RESULT
+        - UNKNOWN
     Transaction:
       type: object
       properties:
         id:
           type: integer
+          description: Primary key (**present** once the **PENDING** row is persisted)
         type:
           type: string
           enum: [BUY, SELL]
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
         btcAmount:
           type: string
-          description: BTC amount (8dp string)
+          description: BTC amount (8dp string); placeholder until **`COMPLETED`**
         brlAmount:
           type: string
           description: BRL amount (2dp string)
         btcPriceBrl:
           type: string
-          description: Execution price BRL per 1 BTC (2dp string)
+          description: Execution price BRL/BTC (**2dp**) when **`COMPLETED`**; **`0.00`** while **`PENDING`**
         createdAt:
           type: string
           format: date-time
+          description: RFC 3339 UTC with Z suffix (**row creation / initiation instant** while **`PENDING`**)
+          example: '2026-05-17T17:30:45Z'
+        failureReason:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/TransactionFailureReason'
+    TradeAcceptedResponse:
+      type: object
+      properties:
+        transaction:
+          $ref: '#/components/schemas/Transaction'
     TransactionListResponse:
       type: object
       properties:

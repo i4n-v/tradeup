@@ -46,20 +46,23 @@ SANCTUM_STATEFUL_DOMAINS=localhost,127.0.0.1
 SESSION_DOMAIN=localhost
 ```
 
-Install dependencies (once Sanctum/Horizon are added to `composer.json`):
+Install dependencies and schema:
 
 ```bash
 composer install
 php artisan migrate
 php artisan storage:link
-php artisan serve
 ```
 
-Horizon (after installation):
+Run the API **with a queue worker** (buy/sell settle asynchronously; **`PENDING`** rows need a worker):
 
 ```bash
-php artisan horizon
+composer run dev
 ```
+
+That starts **`php artisan serve`**, **`php artisan queue:listen`**, logs (Pail), and Vite concurrently. Minimal alternative: two terminals — `php artisan serve` and `php artisan queue:work` (or `queue:listen`). HTTP only (`php artisan serve` alone) is insufficient for settling trades.
+
+**Optional later**: Laravel Horizon (`laravel/horizon`) — not part of the current API `composer.json`.
 
 ## 3. App (`tradeup-app`)
 

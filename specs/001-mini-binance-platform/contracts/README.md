@@ -13,9 +13,9 @@
 | `POST` | `/auth/logout` | Bearer | Revoke current token → 204. |
 | `GET` | `/me` | Bearer | Authenticated user profile. |
 | `GET` | `/dashboard` | Bearer | BRL + BTC balances and BTC quote (string or `null`). |
-| `POST` | `/trades/buy` | Bearer | Buy BTC with BRL (`amountBrl` string, 2dp). BCMath rounding. |
-| `POST` | `/trades/sell` | Bearer | Sell BTC for BRL (`amountBtc` string, 8dp). BCMath rounding. |
-| `GET` | `/transactions` | Bearer | History newest-first. Params: `page` (default 1), `limit` (default 50, max 200). |
+| `POST` | `/trades/buy` | Bearer | HTTP **202** — creates **`PENDING`** + enqueues job; run **`composer run dev`** (or `queue:work`) so trades settle; **422** = validation / insufficient **BRL** (no persistence); BCMath on settlement |
+| `POST` | `/trades/sell` | Bearer | HTTP **202** — same pipeline; **422** = insufficient **BTC** etc. (**no persistence**) |
+| `GET` | `/transactions` | Bearer | **`PENDING` / `COMPLETED` / `FAILED`** newest-first. Optional **`failureReason`** when **`FAILED`**. Params: `page`, `limit` (default 50, max 200). |
 | `PATCH` | `/profile` | Bearer | Update name. Email immutable in v1. |
 | `POST` | `/profile/avatar` | Bearer | Upload avatar (JPEG/PNG/WebP, ≤ 5 MB, ≤ 4096 px). Returns `avatarUrl`. |
 

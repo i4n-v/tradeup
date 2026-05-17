@@ -1,8 +1,7 @@
 # Research: Mini Binance Platform
 
 **Feature**: `001-mini-binance-platform`  
-**Date**: 2026-05-16
-
+**Date**: 2026-05-16 — *Queues revision 2026-05-17*: Laravel **`queue:listen`** / **`queue:work`** and **`composer run dev`** locally; **Laravel Horizon** deferred (optional later).
 Consolidated technical decisions (no remaining `NEEDS CLARIFICATION` for MVP scope).
 
 ---
@@ -23,11 +22,13 @@ Consolidated technical decisions (no remaining `NEEDS CLARIFICATION` for MVP sco
 
 ---
 
-## 3. Redis, queues, and Horizon
+## 3. Redis, queues, and trade settlement
 
-**Decision**: **Redis** for `QUEUE_CONNECTION` and cache; **Laravel Horizon** for supervision and workers. Jobs for async work (cleanup, future notifications, reprocessing); **synchronous trade** in the request with DB transaction **`SERIALIZABLE` or `REPEATABLE READ` + row lock on wallet** (final choice in implementation, document in code).  
-**Rationale**: Spec requires atomicity and no inconsistent states under concurrency.  
-**Alternatives considered**: Trade only via job (worse UX latency / confirmation).
+**Decision**: **Redis** for cache and (per `.env.example`) **`QUEUE_CONNECTION=redis`** when running workers against Redis. **Laravel’s built‑in queue** drives settlement: **`InitiateBuyTrade` / `InitiateSellTrade`** create a **`PENDING`** `transactions` row and dispatch **`ProcessBuyTradeJob` / `ProcessSellTradeJob`**; **`BuyBtc` / `SellBtc`** run inside the job under a DB transaction + **`WalletRepository::lockForUpdate`** so wallet + terminal transaction state remain atomic at commit. **Insufficient balance** matching FR‑018/FR‑022 is enforced **before** enqueue (HTTP **422**, no transaction row).
+
+**Operational note**: **`composer run dev`** runs **`php artisan queue:listen`** next to **`php artisan serve`** so local trades do not stall in **`PENDING`**.
+
+**Alternatives implemented out of MVP**: **Laravel Horizon** (Redis‑only UX for workers/metrics). Add when the stack adopts `laravel/horizon` intentionally.
 
 ---
 
@@ -35,7 +36,7 @@ Consolidated technical decisions (no remaining `NEEDS CLARIFICATION` for MVP sco
 
 **Decision**: File at **monorepo root** with **PostgreSQL** + **Redis**; Laravel runs on the **host** (local PHP) or optional future container.  
 **Rationale**: Explicit user request; less friction for `php artisan` and Xdebug.  
-**Alternatives considered**: Full Sail (heavier); SQLite only (does not match Horizon/Redis goals).
+**Alternatives considered**: Full Sail (heavier); SQLite only (does not match multi‑driver queue + Postgres goals).
 
 ---
 

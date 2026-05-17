@@ -7,18 +7,18 @@
 
 ## Summary
 
-Deliver a **Mini Binance**–style trading experience: **registration, login, dashboard** (BRL/BTC balances + BTC quote), **buy/sell** with domain rules and **history** (newest first), **profile** (name + avatar; email immutable in v1). Back end **`tradeup-api`**: Laravel **API-only**, **Sanctum** (token), **PostgreSQL**, **Redis** + **Horizon** for queues, **Docker Compose** for local infra. App **`tradeup-app`**: React Native, **NativeWind** (avoid `StyleSheet` except where necessary), **react-hook-form** + **zod**, **zustand**, **@tanstack/react-query**, **AsyncStorage** with a central keys module. UI follows the **visual language** in `docs/front-end/visual-reference/` (vibrant yellow, heavily rounded cards, high contrast) — **does not** copy “copy trade” features from the reference images.
+Deliver a **Mini Binance**–style trading experience: **registration, login, dashboard** (BRL/BTC balances + BTC quote), **buy/sell** with domain rules and **history** (newest first), **profile** (name + avatar; email immutable in v1). Back end **`tradeup-api`**: Laravel **API-only**, **Sanctum** (token), **PostgreSQL**, **Redis** (cache + optional `redis` queue backend), **Laravel queue worker** (e.g. `queue:listen` / `queue:work`; local dev bundled in **`composer run dev`**), **Docker Compose** for local infra. **Laravel Horizon** is optional for a later phase (not in the current `tradeup-api` dependencies). App **`tradeup-app`**: React Native, **NativeWind** (avoid `StyleSheet` except where necessary), **react-hook-form** + **zod**, **zustand**, **@tanstack/react-query**, **AsyncStorage** with a central keys module. UI follows the **visual language** in `docs/front-end/visual-reference/` (vibrant yellow, heavily rounded cards, high contrast) — **does not** copy “copy trade” features from the reference images.
 
 ## Technical Context
 
 **Language/Version**: PHP ^8.3, Laravel ^13 (**tradeup-api**); TypeScript / React Native (**tradeup-app**).  
-**Primary Dependencies (API)**: Laravel Sanctum, Horizon, Redis client, Pest; queue workers via Horizon.  
+**Primary Dependencies (API)**: Laravel Sanctum, Redis client, Pest; Laravel queue (**database** default in `config/queue.php`; **Redis** when `QUEUE_CONNECTION=redis` — see `.env.example`). No Horizon package in MVP.  
 **Primary Dependencies (App)**: react-hook-form, zod, @hookform/resolvers, zustand, @tanstack/react-query, @react-native-async-storage/async-storage, nativewind, project Tailwind preset.  
-**Storage**: PostgreSQL (wallet, users, transactions, avatar files); Redis (cache, queues, Horizon).  
+**Storage**: PostgreSQL (wallet, users, transactions, avatar files); Redis (cache; queue backend when configured).  
 **Testing**: Pest + Laravel (**tradeup-api**); Jest + React Native Testing Library per `docs/front-end/tests.md` (**tradeup-app**).  
 **Target Platform**: HTTP(S) API consumed by the app; iOS + Android (RN).  
 **Project Type**: Mobile client + JSON API (no Blade/server UI beyond framework needs).  
-**Performance Goals**: Trades feel < 2s on local dev network; queues not on the synchronous hot path (validation + atomic persist in the request).  
+**Performance Goals**: trade **acceptance** responds quickly (**202** + `PENDING` row); settlement runs in a **worker** — clients refresh **history** for final **`COMPLETED`/`FAILED`**; balance sufficiency checks run **before** enqueue (HTTP **422**, no row). Local dev: run **`composer run dev`** so `queue:listen` processes jobs.  
 **Constraints**: Monetary rules from spec (BRL scale-2, BTC scale-8 half-up, BRL/BTC price scale-2 in band); per-wallet concurrency via DB transactions / appropriate locking.  
 **Scale/Scope**: Educational MVP; hundreds/low thousands of users — no exotic optimisation in v1.
 
@@ -100,8 +100,8 @@ Each phase should be **integrable and testable** end-to-end (or API + contract w
 | **P1** | **Registration** (+ initial wallet 10,000.00 BRL) | User + wallet in DB; Pest tests; registration screen with componentised form |
 | **P2** | **Login** + token persistence (AsyncStorage) + React Query session | Sanctum token; auth interceptor; login tests |
 | **P3** | **Dashboard** balances + quote (aggregated endpoint or two calls) | Values match spec scales; card UI in mood-board style |
-| **P4** | **Buy** BTC (atomic use case + DB transaction) | Safe concurrency; balance errors; rounding per spec |
-| **P5** | **Sell** BTC | Same as P4 |
+| **P4** | **Buy** BTC (**accept** + **queued** **`BuyBtc`** settlement inside DB txn + wallet row lock); **early** insufficient‑BRL **422**, **sync** validations | **`202`** + **`PENDING`** until worker settles; **`COMPLETED`/`FAILED`** + coded failure reasons · Pest + contract |
+| **P5** | **Sell** BTC — same acceptance/settlement split as **P4** | Same |
 | **P6** | **History** (desc by time) | RN list + simple pagination if needed |
 | **P7** | **Profile** name + avatar (disk storage + public URL via API) | Email immutable; MIME/size validation |
 
