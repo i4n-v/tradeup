@@ -10,9 +10,22 @@ final class EloquentTransactionRepository implements TransactionRepository
 {
     public function save(DomainTransaction $transaction): DomainTransaction
     {
-        $model = EloquentTransaction::create(TransactionMapper::fromDomain($transaction));
+        if ($transaction->id() === null) {
+            $model = EloquentTransaction::create(TransactionMapper::fromDomain($transaction));
+        } else {
+            $model = EloquentTransaction::findOrFail($transaction->id());
+            $model->update(TransactionMapper::fromDomainForUpdate($transaction));
+            $model = $model->fresh();
+        }
 
         return TransactionMapper::toDomain($model);
+    }
+
+    public function findById(int $id): ?DomainTransaction
+    {
+        $model = EloquentTransaction::find($id);
+
+        return $model ? TransactionMapper::toDomain($model) : null;
     }
 
     public function listByUserId(int $userId, int $page, int $limit): array

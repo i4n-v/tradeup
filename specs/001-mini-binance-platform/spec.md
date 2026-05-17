@@ -23,6 +23,14 @@
 - Q: BUY when `amountBRL / price` rounds to zero BTC → A: **Reject BUY (clear error), no debit, no transaction—the executed `btcGain` after FR‑019 rounding MUST be strictly positive (not 0.00000000 BTC).**
 - Q: SELL when `amountBTC * price` rounds to zero BRL → A: **Reject SELL (clear error), no wallet change, no transaction—`brlGain` after FR‑023 MUST be strictly greater than 0.00 BRL (not 0.00).**
 
+### Session 2026-05-17 (accepted trade flow — queued settlement)
+
+- BUY/SELL **HTTP acceptance** (**202**) persists a **`transactions`** row **`PENDING`** and enqueues **`ProcessBuyTradeJob`/`ProcessSellTradeJob`**; **`BuyBtc`/`SellBtc`** finalize amounts and move the wallet **inside the worker** (`TransactionManager` + row lock).
+- **Sufficient funds** (**FR‑018 / FR‑022**) is asserted **before** enqueue; **422** ⇒ **no** `transactions` row (same UX intent as rejecting overspend pre‑flight).
+- **Terminal failure after enqueue** (no quote at execution time, concurrency race lowering balance, rounding to zero equivalent, unexpected errors classified as **`UNKNOWN`**) ⇒ row **`FAILED`**, **`failure_reason`** coded for UX; **`COMPLETED`** only when ledger + immutable amounts match (**FR‑010** invariant).
+- **Local dev MUST run a queue worker** alongside HTTP (e.g. **`composer run dev`**, which includes **`queue:listen`**) or **`PENDING`** will not settle.
+- **Laravel Horizon**: **not** in current API dependencies — optional enhancement with Redis dashboards later.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Register and open an account (Priority: P1)
@@ -87,7 +95,8 @@ An authenticated user spends a chosen BRL amount to acquire BTC using the BTC pr
 1. **Given** sufficient BRL and a valid positive `amountBRL` such that **`btcGain`** ( **`amountBRL / executionPrice` rounded half up to eight decimals**) is **strictly greater than 0.00000000 BTC**, **When** the user buys BTC, **Then** BRL decreases by `amountBRL`, BTC increases by **`btcGain`**, one BUY transaction exists with those amounts and price, and all updates appear as one consistent state change.
 2. **Given** insufficient BRL for the requested spend, **When** the user attempts the buy, **Then** the operation fails, balances are unchanged, and no transaction is created.
 3. **Given** zero or negative `amountBRL`, **When** the user attempts the buy, **Then** the operation is rejected with a clear error and no wallet or transaction change.
-4. **Given** **no authoritative execution-time BTC quote** satisfying FR‑012 **at commit time**, **When** they attempt to buy BTC, **Then** the operation fails **with no wallet debit and no new transaction.**
+4. **Given** **no authoritative execution-time BTC quote** satisfying FR‑012 **during settlement**, **When** a BUY already accepted (**HTTP 202**) as **`PENDING`** is processed by the worker, **Then** **`COMPLETED` MUST NOT** occur (**no wallet debit**, no BTC credit); **`FAILED`** MUST reflect quote unavailability (or an equivalent UX-stable coded reason)—ledger outcome equivalent to no executed BUY.
+
 5. **Given** **`amountBRL / executionPrice` rounded half up to eight decimal places** yields **0.00000000 BTC**, **When** they attempt to buy BTC, **Then** the operation is rejected with a clear validation error **with no wallet debit** and **no new transaction.**
 
 ---
@@ -105,22 +114,22 @@ An authenticated user sells a chosen BTC amount and receives BRL computed from t
 1. **Given** sufficient BTC and valid positive `amountBTC` such that **`brlGain`** ( **`amountBTC * executionPrice` rounded half up to two decimals**) is **strictly greater than 0.00 BRL**, **When** the user sells, **Then** BTC decreases by `amountBTC`, BRL increases by **`brlGain`**, one SELL transaction records those exact amounts and price, and wallet state is fully consistent.
 2. **Given** insufficient BTC, **When** the user attempts the sell, **Then** the operation fails with balances unchanged and no transaction created.
 3. **Given** zero or negative `amountBTC`, **When** the user attempts the sell, **Then** the operation is rejected with a clear error and no state change.
-4. **Given** **no authoritative execution-time BTC quote** satisfying FR‑012 **at commit time**, **When** they attempt to sell, **Then** the operation fails **with no wallet change and no new transaction.**
+4. **Given** **no authoritative execution-time BTC quote** satisfying FR‑012 **during settlement**, **When** a SELL already accepted (**HTTP 202**) as **`PENDING`** is processed by the worker, **Then** **`COMPLETED` MUST NOT** occur (**no wallet change**); **`FAILED`** MUST reflect quote unavailability (or an equivalent UX-stable coded reason)—ledger outcome equivalent to no executed SELL.
 5. **Given** **`amountBTC * executionPrice` rounded half up to two decimal places** yields **0.00 BRL**, **When** they attempt to sell, **Then** the operation is rejected with a clear validation error **with no wallet change** and **no new transaction.**
 
 ---
 
 ### User Story 6 - See your trade history (Priority: P2)
 
-An authenticated user reviews a **paged, chronological list of their own completed trades**, **newest first**, using client-supplied **`page`** and **`limit`**.
+An authenticated user reviews a **paged list of their own trade records** (**`PENDING`**, **`COMPLETED`**, **`FAILED`**), **newest first**, using client-supplied **`page`** and **`limit`**.
 
 **Why this priority**: Transparency and reconciliation after trading.
 
-**Independent Test**: After trades, list history with valid `page`/`limit` and confirm only records belonging to that user appear, each immutable and matching wallet movements, with the latest trade at the top of page 1; confirm invalid paging inputs are rejected.
+**Independent Test**: After trades, list history with valid `page`/`limit` and confirm only records belonging to that user appear; newest trade at top of page 1; **`COMPLETED`** rows match wallet movements; **`FAILED`** rows expose actionable failure context; **`PENDING`** may appear until settlement; invalid paging rejected.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with past trades, **When** they request history with valid **`page`** and **`limit`**, **Then** they see only their transactions for that page **ordered from newest to oldest by execution time** (per **UTC** `createdAt`; see FR‑031), with type (BUY or SELL), BTC amount, BRL amount, price, and **`createdAt`** in **UTC ISO 8601** form.
+1. **Given** a user with past trade activity, **When** they request history with valid **`page`** and **`limit`**, **Then** they see only their transactions for that page **ordered newest to oldest** by **`createdAt` (UTC)**; each item includes **`type`**, **`status`**, **`btcAmount`**, **`brlAmount`**, **`btcPriceBrl`**, optional **`failureReason`** when **`FAILED`**, **`createdAt` (RFC‑3339 with `Z`).
 2. **Given** another user’s trades, **When** this user requests history, **Then** those records never appear.
 3. **Given** omitted **`page`** or **`limit`**, **When** they request history, **Then** the system applies **default `page` 1** and **default `limit` 50**.
 4. **Given** **`limit` greater than 200**, **non-positive `page`**, **non-positive `limit`**, or other invalid paging values, **When** they request history, **Then** the system rejects the request with a clear validation error and returns no rows.
@@ -193,7 +202,7 @@ An authenticated user updates their display name and optional avatar image subje
 **Market price**
 
 - **FR-012**: Any **published numeric BTC–BRL price** used **for Dashboard display** or **for trade execution**, when shown or applied **as the authoritative quote**, MUST satisfy **exactly two decimal places** and **between 200,000.00 and 300,000.00 BRL inclusive** per **1** BTC. The platform MUST NOT **fabricate** such a compliant price when none is **authoritatively obtainable**.
-- **FR-012a**: **BUY** and **SELL** MUST be rejected (**clear error**) with **zero wallet mutation** and **no new transaction** when **no authoritative quote** satisfying FR‑012 exists **for that execution**.
+- **FR-012a**: BUY and SELL MUST **not** reach **`COMPLETED`** without an authoritative quote satisfying FR‑012 **during settlement**. The implementation MAY return **HTTP 202**, persist **`PENDING`**, then **`FAIL`** in the worker (**no ledger movement**, **clear failure reason**). It MAY alternatively reject synchronously (**HTTP 422**, **no transaction row**) before enqueue (**same invariant**).
 - **FR-013**: The price MAY differ across executions or time; each successful trade MUST snapshot the **execution** price on the transaction record **at two decimal places**, matching the authoritative quote obtained **for that execution**.
 
 **Dashboard (home)**
@@ -218,8 +227,8 @@ An authenticated user updates their display name and optional avatar image subje
 
 **Transactions & history**
 
-- **FR-025**: Every successful trade MUST create exactly one immutable transaction; failed trades MUST create none.
-- **FR-026**: Transaction records MUST be immutable after creation and MUST store exact executed `btcAmount`, `brlAmount`, and `price`.
+- **FR-025**: Every successful **`COMPLETED`** trade MUST correspond to exactly one immutable terminal transaction row aligned with FR‑026; **`PENDING`/`FAILED`** lifecycle rows MAY exist for accepted or failed executions; **rejections before enqueue** (validation, insufficient balance, deterministic dust per FR‑019/FR‑023) MUST create **no** row.
+- **FR-026**: **`COMPLETED`** transaction rows MUST remain immutable (**amounts**, **`btc_price_brl`**, **`COMPLETED`** status) **after execution**; **`PENDING`** rows MAY mutate to **`COMPLETED`** or **`FAILED`** with optional **`failure_reason`** when settlement finishes.
 - **FR-031**: All **persisted clock instants** exposed through the API (**including** **`Transaction.createdAt`**, **`User.createdAt`**, **`Wallet.updatedAt`**, token **`expires_at`** when returned) MUST be **UTC**. Serialized values MUST use **RFC 3339 / ISO 8601** with an explicit UTC indicator (**suffix `Z`** or **`+00:00`**). Listing and sort order (**e.g.** FR‑027 newest-first) MUST use **the same canonical UTC instant** without depending on client local zones.
 - **FR-027**: Users MUST be able to list only their own transactions ordered by execution time **descending (newest first)**. The listing API MUST accept client **`page`** and **`limit`** parameters: **`page`** is **1-based** and defaults to **1** when omitted; **`limit`** defaults to **50** when omitted, MUST be at least **1**, and MUST NOT exceed **200**; invalid combinations MUST be rejected with a clear validation error. Each response MUST contain at most **`limit`** rows for the requested **`page`**.
 
@@ -233,8 +242,8 @@ An authenticated user updates their display name and optional avatar image subje
 
 - **User**: Account for one person; attributes include identifier, name, unique email (immutable for the user after registration in v1), secured password material, optional avatar reference (uploads: **JPEG/PNG/WebP**, **≤5 MB**, **≤4096×4096** px), **created-at (UTC)**; owns exactly one **Wallet**.
 - **Wallet**: Holds **BRL** (scale **2**, half up when rounding to this scale) and **BTC** (scale **8**, half up when rounding to this scale) for one user; attributes include user reference, BRL balance, BTC balance, **updated-at (UTC)**; subject to non-negative invariants and atomic updates.
-- **Transaction**: Immutable record of one completed trade; attributes include identifier, user reference, type (BUY or SELL), BTC amount, BRL amount, **execution `price` (BRL per BTC, two decimal places)**, **`createdAt` (UTC execution instant)**; always paired 1:1 with a successful trade; users retrieve theirs via **paged lists** (**`page`**, **`limit`**; see FR-027).
-- **MarketPrice (concept)**: **Authoritative** **BRL per 1 BTC** quote **when obtainable**, **two decimal places**, constrained **from 200,000.00 through 300,000.00 inclusive**—used at trade commit and optionally on the Dashboard whenever a numeric compliant quote is surfaced; trades **never** proceed without authority at execution (FR‑012a); the Dashboard MUST **never** synthesize FR‑012‑compliant numbers when none exists; each persisted **Transaction** stores the execution snapshot at that scale when a trade succeeds.
+- **Transaction**: Record of **one BUY or one SELL** with lifecycle **`status`**: **`PENDING`** (accepted, settlement queued), **`COMPLETED`** (wallet movements applied in settlement; aligns with FR‑026), or **`FAILED`** (**`failure_reason`**: stable machine-readable code mapped to UX). Holds type (BUY/SELL), `btcAmount`, `brlAmount`, `btc_price_brl` (**two decimals** when **`COMPLETED`**; placeholders while **`PENDING`**), **`createdAt`** (**UTC**) for ordering (FR‑027); users retrieve via **`page`/`limit`**.
+- **MarketPrice (concept)**: **Authoritative** **BRL per 1 BTC** quote **when obtainable**, **two decimal places**, constrained **from 200,000.00 through 300,000.00 inclusive**—used when settling a **`COMPLETED`** trade and optionally on the Dashboard whenever a numeric compliant quote is surfaced; **`COMPLETED`** never occurs without authority at settlement (FR‑012a); the Dashboard MUST **never** synthesize FR‑012‑compliant numbers when none exists; each **`COMPLETED` `Transaction`** stores the execution **`btc_price_brl`** snapshot at that scale.
 
 **Relationships**: User 1—1 Wallet; User 1—* Transaction; each Transaction references exactly one User.
 

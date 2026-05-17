@@ -5,7 +5,7 @@ Laravel **JSON API** for Trade Up (Mini Binance): users, BRL/BTC wallet, quote, 
 ## Requirements
 
 - **PHP** and **Composer**
-- **PostgreSQL** and **Redis** for local development (e.g. `docker compose up -d` from the repo root — see [`../docker-compose.yml`](../docker-compose.yml))
+- **PostgreSQL** and **Redis** for local development — start with `docker compose up -d` from this package (see [`docker-compose.yml`](./docker-compose.yml))
 - **Node + npm** if you run the default frontend asset tooling
 
 ### Stack
@@ -14,14 +14,13 @@ Laravel **JSON API** for Trade Up (Mini Binance): users, BRL/BTC wallet, quote, 
 - PostgreSQL
 - Redis
 - Laravel Sanctum
-- Laravel Horizon
+- Laravel queue worker (included in `composer run dev`)
 
 ## Getting started
 
-1. **Start infra** (from monorepo root):
+1. **Start infra** (from `tradeup-api/`):
 
    ```bash
-   cd ..
    docker compose up -d
    ```
 
@@ -47,13 +46,25 @@ Laravel **JSON API** for Trade Up (Mini Binance): users, BRL/BTC wallet, quote, 
    php artisan storage:link
    ```
 
-5. **Run the API**
+5. **Run the API (recommended)**
+
+   Buy/sell create a pending transaction and process in a **queue worker**. If you run only HTTP without a worker, trades stay **`PENDING`** until something consumes the queue.
+
+   From `tradeup-api/`, prefer:
+
+   ```bash
+   composer run dev
+   ```
+
+   That starts **`php artisan serve`**, **`php artisan queue:listen`** (alongside logs and Vite) in one process.
+
+   Minimal alternative: two terminals — `php artisan serve` **and** `php artisan queue:work` (or `queue:listen`).
+
+   For HTTP only:
 
    ```bash
    php artisan serve
    ```
-
-6. **Horizon** (after package install): `php artisan horizon` in a separate terminal.
 
 ## Documentation references
 
@@ -71,4 +82,4 @@ Laravel **JSON API** for Trade Up (Mini Binance): users, BRL/BTC wallet, quote, 
 |----------|----------|
 | Monorepo overview | [`../README.md`](../README.md) |
 | Mobile app package | [`../tradeup-app/README.md`](../tradeup-app/README.md) |
-| Local Postgres / Redis | [`../docker-compose.yml`](../docker-compose.yml) |
+| Local Postgres / Redis | [`docker-compose.yml`](./docker-compose.yml) |

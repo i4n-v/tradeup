@@ -22,6 +22,7 @@ it('should return paged transactions for owner newest first', function () {
         'btc_amount' => '0.00400000',
         'brl_amount' => '1000.00',
         'btc_price_brl' => '250000.00',
+        'status' => 'COMPLETED',
         'created_at' => now(),
     ]);
 
@@ -29,7 +30,7 @@ it('should return paged transactions for owner newest first', function () {
 
     $response->assertOk()
         ->assertJsonStructure([
-            'data' => [['id', 'type', 'btcAmount', 'brlAmount', 'btcPriceBrl', 'createdAt']],
+            'data' => [['id', 'type', 'status', 'btcAmount', 'brlAmount', 'btcPriceBrl', 'createdAt']],
             'meta' => ['page', 'limit', 'total'],
         ])
         ->assertJsonPath('meta.page', 1)

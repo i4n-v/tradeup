@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@hooks/use-query/use-query.hook';
 import { Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -13,10 +13,14 @@ import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 import type { IAvatarUploadInput } from '@/resources/services/profile/profile.type';
 import type { IProfileDomainDTO } from '@/resources/services/profile/dtos/profile.domain.dto';
 
-import { profileSchema, type IProfileFormValues, type IProfileViewProps } from './profile.model';
+import {
+  profileSchema,
+  type IProfileFormValues,
+  type IProfileViewProps,
+} from './profile.model';
 
 function useProfileViewModel(): IProfileViewProps {
-  const clearSession = useSessionStore((s) => s.clearSession);
+  const clearSession = useSessionStore(s => s.clearSession);
   const queryClient = useQueryClient();
   const registry = Registry.getInstance();
   const profileService = registry.inject('profileService');
@@ -36,13 +40,10 @@ function useProfileViewModel(): IProfileViewProps {
   } = useQuery({
     queryKey: profileQueryKeys.profile(),
     queryFn: () => profileService.getProfile(),
+    onSuccess: (data) => {
+      if (data.name) form.reset({ name: data.name });
+    },
   });
-
-  useEffect(() => {
-    if (profile?.name) form.reset({ name: profile.name });
-    // form from useForm() is stable across renders (React Hook Form guarantee)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.name]);
 
   const saveMutation = useMutation({
     mutationFn: (data: IProfileFormValues) => profileService.updateName(data),
@@ -50,20 +51,25 @@ function useProfileViewModel(): IProfileViewProps {
       toast.success(PT_BR.profile.nameUpdated);
       queryClient.invalidateQueries({ queryKey: profileQueryKeys.profile() });
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, PT_BR.profile.errors.nameSaveFailed)),
+    onError: error =>
+      toast.error(
+        getApiErrorMessage(error, PT_BR.profile.errors.nameSaveFailed),
+      ),
   });
 
   const avatarMutation = useMutation({
-    mutationFn: (input: IAvatarUploadInput) => profileService.uploadAvatar(input),
-    onSuccess: (newAvatarUrl) => {
+    mutationFn: (input: IAvatarUploadInput) =>
+      profileService.uploadAvatar(input),
+    onSuccess: newAvatarUrl => {
       toast.success(PT_BR.profile.avatarUpdated);
       queryClient.setQueryData(
         profileQueryKeys.profile(),
-        (old: IProfileDomainDTO | undefined) => (old ? { ...old, avatarUrl: newAvatarUrl } : old),
+        (old: IProfileDomainDTO | undefined) =>
+          old ? { ...old, avatarUrl: newAvatarUrl } : old,
       );
       queryClient.invalidateQueries({ queryKey: profileQueryKeys.profile() });
     },
-    onError: (error) =>
+    onError: error =>
       toast.error(getApiErrorMessage(error, PT_BR.common.error)),
   });
 
@@ -105,7 +111,7 @@ function useProfileViewModel(): IProfileViewProps {
 
   return {
     form,
-    onSave: form.handleSubmit((data) => saveMutation.mutate(data)),
+    onSave: form.handleSubmit(data => saveMutation.mutate(data)),
     onChangeAvatar,
     onLogout,
     isSaving: saveMutation.isPending,
@@ -115,7 +121,7 @@ function useProfileViewModel(): IProfileViewProps {
     name: profile?.name ?? '',
     isLoading,
     onRefresh: () => {
-      void refetch();
+      refetch();
     },
     isRefreshing: isFetching,
   };

@@ -36,3 +36,4 @@
 ## Notes
 
 - Planning SHOULD treat FR-012/FR-019/FR-023/FR-026 together for numeric acceptance tests (single source of truth for rounding order).
+- Docs synced **2026-05-17**: async trades (**HTTP 202**, **`PENDING` → worker → `COMPLETED`/`FAILED`**), **`failure_reason`/`failureReason`**, early balance **422** (no DB row), **`composer run dev`** includes **`queue:listen`**, no Horizon package in MVP.

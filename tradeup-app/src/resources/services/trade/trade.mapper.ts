@@ -6,17 +6,18 @@ export class TradeMapper {
     return {
       id: p.id,
       type: p.type,
+      status: p.status,
       btcAmount: p.btcAmount,
       brlAmount: p.brlAmount,
       btcPriceBrl: p.btcPriceBrl,
       createdAt: p.createdAt,
+      failureReason: p.failureReason ?? null,
     };
   }
 
   toDomain(p: ITradePersistenceDTO): ITradeDomainDTO {
     return {
       transaction: this.transactionToDomain(p.transaction),
-      wallet: { brlBalance: p.wallet.brlBalance, btcBalance: p.wallet.btcBalance },
     };
   }
 }

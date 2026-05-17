@@ -7,12 +7,9 @@ use App\Application\Trading\Exceptions\InsufficientFundsException;
 use App\Application\Trading\Exceptions\QuoteUnavailableException;
 use App\Application\Trading\Exceptions\ZeroResultException;
 use App\Domain\Shared\MonetaryMath;
-use App\Domain\Trading\Entities\Transaction;
 use App\Domain\Trading\Ports\QuoteServicePort;
 use App\Domain\Trading\Repositories\TransactionRepository;
 use App\Domain\Trading\Repositories\WalletRepository;
-use App\Domain\Trading\ValueObjects\TradeType;
-use InvalidArgumentException;
 
 final class BuyBtc
 {
@@ -23,22 +20,23 @@ final class BuyBtc
         private readonly TransactionManagerPort $txManager,
     ) {}
 
-    public function execute(BuyBtcInput $input): TradeResult
+    public function execute(BuyBtcInput $input): void
     {
-        $amountBrl = $input->amountBrl;
+        $this->txManager->run(function () use ($input) {
+            $transaction = $this->transactions->findById($input->transactionId);
 
-        if (! preg_match('/^\d+(\.\d{1,2})?$/', $amountBrl) || bccomp($amountBrl, '0', 2) <= 0) {
-            throw new InvalidArgumentException('Invalid BRL amount format.');
-        }
+            if ($transaction === null) {
+                throw new \RuntimeException("Transaction {$input->transactionId} not found.");
+            }
 
-        $price = $this->quoteService->getQuote();
+            $price = $this->quoteService->getQuote();
 
-        if ($price === null) {
-            throw new QuoteUnavailableException;
-        }
+            if ($price === null) {
+                throw new QuoteUnavailableException;
+            }
 
-        return $this->txManager->run(function () use ($input, $amountBrl, $price) {
             $wallet = $this->wallets->lockForUpdate($input->userId);
+            $amountBrl = $transaction->brlAmount();
 
             if ($wallet === null || bccomp($wallet->brlBalance(), $amountBrl, 2) < 0) {
                 throw new InsufficientFundsException('BRL');
@@ -54,17 +52,8 @@ final class BuyBtc
             $wallet->creditBtc($btcAmount);
             $this->wallets->save($wallet);
 
-            $transaction = Transaction::record(
-                userId: $input->userId,
-                type: TradeType::Buy,
-                btcAmount: $btcAmount,
-                brlAmount: $amountBrl,
-                btcPriceBrl: $price,
-            );
-
-            $savedTransaction = $this->transactions->save($transaction);
-
-            return new TradeResult(transaction: $savedTransaction, wallet: $wallet);
+            $transaction->complete($btcAmount, $amountBrl, $price);
+            $this->transactions->save($transaction);
         });
     }
 }

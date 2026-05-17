@@ -60,8 +60,15 @@ describe('useBuyTradeViewModel', () => {
 
   it('should call tradeService.buy with amountBrl on submit', async () => {
     mockTradeService.buy.mockResolvedValue({
-      transaction: { id: '1', type: 'BUY', btcAmount: '0.001', brlAmount: '250.00', btcPriceBrl: '250000.00', createdAt: '' },
-      wallet: { brlBalance: '9750.00', btcBalance: '0.00100000' },
+      transaction: {
+        id: '1',
+        type: 'BUY',
+        status: 'PENDING',
+        btcAmount: '0.00000000',
+        brlAmount: '250.00',
+        btcPriceBrl: '0.00',
+        createdAt: '',
+      },
     });
 
     const { result } = renderHook(() => useBuyTradeViewModel(), {
@@ -81,11 +88,18 @@ describe('useBuyTradeViewModel', () => {
     });
   });
 
-  it('should show success toast after successful buy', async () => {
+  it('should show processing toast after successful buy', async () => {
     const { toast } = require('@/lib/toast/toast.lib');
     mockTradeService.buy.mockResolvedValue({
-      transaction: { id: '1', type: 'BUY', btcAmount: '0.001', brlAmount: '250.00', btcPriceBrl: '250000.00', createdAt: '' },
-      wallet: { brlBalance: '9750.00', btcBalance: '0.00100000' },
+      transaction: {
+        id: '1',
+        type: 'BUY',
+        status: 'PENDING',
+        btcAmount: '0.00000000',
+        brlAmount: '250.00',
+        btcPriceBrl: '0.00',
+        createdAt: '',
+      },
     });
 
     const { result } = renderHook(() => useBuyTradeViewModel(), {

@@ -48,6 +48,7 @@ export const PT_BR = {
     confirmSellTitle: 'Confirmar venda',
     confirm: 'Confirmar',
     cancel: 'Cancelar',
+    processing: 'Operação enviada! Acompanhe o resultado no histórico.',
     success: {
       buy: 'BTC comprado com sucesso!',
       sell: 'BTC vendido com sucesso!',
@@ -67,9 +68,21 @@ export const PT_BR = {
     empty: 'Nenhuma transação encontrada',
     buy: 'Compra',
     sell: 'Venda',
-    completed: 'Concluída',
     loadMore: 'Carregar mais',
     priceAtTrade: 'Cotação na operação',
+    failureDetails: 'Motivo da falha',
+    status: {
+      pending: 'Pendente',
+      completed: 'Concluída',
+      failed: 'Falhou',
+    },
+    failureReason: {
+      INSUFFICIENT_BRL_FUNDS: 'Saldo BRL insuficiente para esta operação.',
+      INSUFFICIENT_BTC_FUNDS: 'Saldo BTC insuficiente para esta operação.',
+      QUOTE_UNAVAILABLE: 'Cotação BTC indisponível no momento. Tente novamente mais tarde.',
+      ZERO_RESULT: 'Valor muito baixo. Informe um montante maior.',
+      UNKNOWN: 'Erro inesperado ao processar a operação. Tente novamente.',
+    },
   },
   profile: {
     title: 'Perfil',
