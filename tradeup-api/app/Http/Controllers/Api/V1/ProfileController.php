@@ -41,10 +41,14 @@ class ProfileController extends Controller
 
     public function uploadAvatar(UploadAvatarRequest $request): JsonResponse
     {
-        $result = $this->uploadAvatar->execute(new UploadAvatarInput(
-            userId: $request->user()->id,
-            file: $request->file('avatar'),
-        ));
+        try {
+            $result = $this->uploadAvatar->execute(new UploadAvatarInput(
+                userId: $request->user()->id,
+                file: $request->file('avatar'),
+            ));
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'avatarUrl' => $result->avatarUrl,
