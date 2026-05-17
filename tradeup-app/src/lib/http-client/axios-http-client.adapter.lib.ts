@@ -23,7 +23,11 @@ export class AxiosHttpClientAdapter implements IHttpClient {
 
   private errorHandler(error: unknown): never {
     if (error instanceof AxiosError) {
-      throw new HttpClientError(error.message, error.response!.status, error.response!.data);
+      throw new HttpClientError(
+        error.message,
+        error.response?.status ?? 0,
+        error.response?.data ?? null,
+      );
     }
 
     throw error;
@@ -45,7 +49,11 @@ export class AxiosHttpClientAdapter implements IHttpClient {
       (error) => {
         if (error instanceof AxiosError) {
           return rejectedCallback(
-            new HttpClientError(error.message, error.response!.status, error.response!.data),
+            new HttpClientError(
+              error.message,
+              error.response?.status ?? 0,
+              error.response?.data ?? null,
+            ),
           );
         }
 
@@ -64,7 +72,11 @@ export class AxiosHttpClientAdapter implements IHttpClient {
     return this.instance.interceptors.response.use(fullfilledCallback, (error) => {
       if (error instanceof AxiosError) {
         return rejectedCallback(
-          new HttpClientError(error.message, error.response!.status, error.response!.data),
+          new HttpClientError(
+            error.message,
+            error.response?.status ?? 0,
+            error.response?.data ?? null,
+          ),
         );
       }
 
