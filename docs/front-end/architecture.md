@@ -303,6 +303,8 @@ export function useUserProfileViewModel({ userId }: IUserProfileProps) {
 
 ### Component (Binder): connects ViewModel to View
 
+In binders, store the view-model hook return in a variable named **`logic`**, then spread it into the view (`{...logic}`) or destructure fields from it.
+
 `user-profile.component.tsx`
 
 ```tsx
@@ -311,8 +313,8 @@ import { useUserProfileViewModel } from './user-profile.view-model';
 import { UserProfileView } from './user-profile.view';
 
 export function UserProfile(props: IUserProfileProps) {
-  const viewModel = useUserProfileViewModel(props);
-  return <UserProfileView {...viewModel} />;
+  const logic = useUserProfileViewModel(props);
+  return <UserProfileView {...logic} />;
 }
 ```
 

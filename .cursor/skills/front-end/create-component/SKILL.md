@@ -19,6 +19,7 @@ Full references (when those repos are available):
 
 - **Views / presentational components:** Props in, JSX out. No `Registry.inject`, no React Query, no navigation side-effects hidden inside reusable UI (unless the component is explicitly a smart container documented as such).
 - **ViewModels / hooks:** Data fetching, mutations, navigation orchestration — keep out of leaf UI.
+- **Binder (`*.component.tsx`):** Assign the view-model hook return value to **`logic`** (e.g. `const logic = useFooViewModel(props)`; `<FooView {...logic} />`). Destructure from `logic` when the view only needs a subset.
 
 ---
 

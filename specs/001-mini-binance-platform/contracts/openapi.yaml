@@ -23,11 +23,11 @@ paths:
               $ref: '#/components/schemas/RegisterRequest'
       responses:
         '201':
-          description: Created
+          description: Created — no token returned; user must call /auth/login to obtain a token (FR-001a)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/RegisterResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
   /auth/login:
@@ -115,16 +115,19 @@ paths:
     get:
       summary: User transaction history (newest first)
       parameters:
-        - name: cursor
+        - name: page
           in: query
           schema:
-            type: string
-          description: Optional pagination cursor (convention TBD in implementation)
+            type: integer
+            default: 1
+          description: Page number (1-based)
         - name: limit
           in: query
           schema:
             type: integer
             default: 50
+            maximum: 200
+          description: Number of results per page (max 200)
       responses:
         '200':
           description: OK
@@ -224,6 +227,12 @@ components:
         password:
           type: string
           format: password
+    RegisterResponse:
+      type: object
+      description: Registration response — no Bearer token (FR-001a). Use /auth/login to obtain a token.
+      properties:
+        user:
+          $ref: '#/components/schemas/UserProfile'
     AuthResponse:
       type: object
       properties:
@@ -235,7 +244,7 @@ components:
       type: object
       properties:
         id:
-          type: string
+          type: integer
         name:
           type: string
         email:
@@ -253,21 +262,27 @@ components:
       properties:
         brlBalance:
           type: string
+          description: BRL balance (2dp string)
           example: '10000.00'
         btcBalance:
           type: string
+          description: BTC balance (8dp string)
           example: '0.00000000'
         btcPriceBrl:
           type: string
-          description: Current BRL price per 1 BTC (2dp, within allowed band)
+          nullable: true
+          description: Current BRL price per 1 BTC (2dp string), null if unavailable
           example: '250000.00'
+        quoteAvailable:
+          type: boolean
+          description: False when btcPriceBrl is null
     BuyRequest:
       type: object
       required: [amountBrl]
       properties:
         amountBrl:
           type: string
-          description: BRL amount to spend (2dp)
+          description: BRL amount to spend (2dp string)
           example: '100.00'
     SellRequest:
       type: object
@@ -275,7 +290,7 @@ components:
       properties:
         amountBtc:
           type: string
-          description: BTC amount to sell (up to 8dp)
+          description: BTC amount to sell (up to 8dp string)
           example: '0.01000000'
     TradeResponse:
       type: object
@@ -287,22 +302,27 @@ components:
           properties:
             brlBalance:
               type: string
+              description: Updated BRL balance (2dp string)
             btcBalance:
               type: string
+              description: Updated BTC balance (8dp string)
     Transaction:
       type: object
       properties:
         id:
-          type: string
+          type: integer
         type:
           type: string
           enum: [BUY, SELL]
         btcAmount:
           type: string
+          description: BTC amount (8dp string)
         brlAmount:
           type: string
+          description: BRL amount (2dp string)
         btcPriceBrl:
           type: string
+          description: Execution price BRL per 1 BTC (2dp string)
         createdAt:
           type: string
           format: date-time
@@ -313,3 +333,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
