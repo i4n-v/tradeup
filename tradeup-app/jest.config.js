@@ -1,13 +1,10 @@
-const rnPreset = require('@react-native/jest-preset');
-
 module.exports = {
-  ...rnPreset,
-  // Metro skips Babel on most node_modules; css-interop ships JSX in .js and must be transformed.
+  preset: 'react-native',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|react-native-css-interop|nativewind)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-native-vector-icons|react-native-css-interop|nativewind)/)',
   ],
   moduleNameMapper: {
-    ...rnPreset.moduleNameMapper,
+    '^@/(.*)$': '<rootDir>/src/$1',
     '^@decorators/(.*)$': '<rootDir>/src/decorators/$1',
     '^@configs/(.*)$': '<rootDir>/src/configs/$1',
     '^@lib/(.*)$': '<rootDir>/src/lib/$1',

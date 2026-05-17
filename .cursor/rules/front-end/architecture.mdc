@@ -12,6 +12,7 @@ Follow **[docs/front-end/architecture.md](../../../docs/front-end/architecture.m
 - **Placement:** Full screens live under **`src/screens/<feature>/`**. Reusable UI lives under **`src/components/<category>/...`** (no `pages/` or `shared/` folder). Navigation: **`src/routes/router.tsx`** plus **`src/routes/auth/*.route.tsx`** and **`src/routes/unauth/*.route.tsx`** (see doc for tree).
 - **Data:** **`src/resources/services/`** and **`src/resources/repositories/`** are siblings. **ViewModels never import repositories** — only Services. Services are classes with **constructor injection**; instances are **registered once** in bootstrap (`App.tsx`), **not** exported as module singletons for app use.
 - **Styling:** Use the project’s utility/class approach (e.g. `className` with NativeWind); do not introduce `StyleSheet` in new code unless the doc or codebase explicitly requires it.
+- **Language:** **Code in English** (names, types, files, comments). **User-visible app copy in Portuguese (pt-BR)** — labels, buttons, errors shown to users, accessibility strings. Prefer centralising copy (e.g. `src/i18n/pt-BR.ts`); map API errors to Portuguese in the client when displaying.
 
 **Incorrect (Service passed from binder, View knows data source):**
 

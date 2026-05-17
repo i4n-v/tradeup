@@ -31,7 +31,16 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify alignment with `.specify/memory/constitution.md` (Trade Up Constitution):
+
+- **Code quality**: Conventions, typing/linting strategy, and clarity of public contracts defined for touched codebases.
+- **Testing**: Unit/integration/contract/UI coverage plan for behavior changes; noted exceptions include rationale and expiry.
+- **Performance**: Budgets for latency, UI smoothness, memory, and network; measurement approach identified for hot paths.
+- **Security & privacy**: Threats, authn/z boundaries, secret handling, and data retention for new flows documented.
+- **Mobile UI/UX**: Loading/empty/error states, navigation impact, localization, and destructive-action safeguards considered.
+- **Maintainability**: Module boundaries, duplication/consolidation, migrations/rollback for schema or API changes addressed.
+- **Accessibility**: Roles/names/values, contrast and touch targets, reduced-motion options for primary flows when UI changes.
+- **Decoupling**: Interfaces for infrastructure, versioning/back-compat for API or shared contracts, feature-flag strategy if used.
 
 ## Project Structure
 

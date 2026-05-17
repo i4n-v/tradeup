@@ -3,11 +3,22 @@ module.exports = {
   content: [
     "./src/App.tsx",
     "./src/components/**/*.{js,jsx,ts,tsx}",
-    "./src/screens/**/*.{js,jsx,ts,tsx}"
+    "./src/screens/**/*.{js,jsx,ts,tsx}",
+    "./src/routes/**/*.{js,jsx,ts,tsx}"
   ],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      fontFamily: {
+        primary: ['Poppins-Regular'],
+        'primary-medium': ['Poppins-Medium'],
+        'primary-semibold': ['Poppins-SemiBold'],
+        secondary: ['OpenSans-Regular'],
+        'secondary-light': ['OpenSans-Light'],
+        'secondary-medium': ['OpenSans-Medium'],
+        'secondary-semibold': ['OpenSans-SemiBold'],
+        'secondary-bold': ['OpenSans-Bold'],
+      },
       colors: {
         primary: {
           50: '#fefce8',

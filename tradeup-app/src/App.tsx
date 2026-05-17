@@ -1,26 +1,21 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { StatusBar, Text, View } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import '@configs/di-container.config';
-import { Registry } from '@lib/registry/registry.lib';
+import Toast from 'react-native-toast-message';
+
+import { queryClient } from '@/configs/di-container.config';
+import { Router } from '@/routes/router';
+
 import './global.css';
 
-
-function App() {
-  const queryClient = Registry.getInstance().inject('queryClient');
-
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" />
-        <View className="flex-1 bg-base-900 pt-10">
-          <Text className="text-base-0 text-2xl font-bold">Hello World</Text>
-        </View>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <Router />
+        <Toast />
       </SafeAreaProvider>
     </QueryClientProvider>
   );
 }
-
-
-
-export default App;
