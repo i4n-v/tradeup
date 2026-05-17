@@ -13,10 +13,13 @@ export interface IProfileViewProps {
   onChangeAvatar: () => void;
   onLogout: () => void;
   isSaving: boolean;
+  isUploadingAvatar: boolean;
   email: string;
   avatarUrl: string | null;
   name: string;
   isLoading: boolean;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
 export { profileSchema };

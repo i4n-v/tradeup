@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { API_BASE_URL } from '@env';
+import { API_BASE_URL, STORAGE_BASE_URL } from '@env';
 
 import { Registry } from '@lib/registry/registry.lib';
 import { AxiosHttpClientAdapter } from '@lib/http-client/axios-http-client.adapter.lib';
@@ -41,5 +41,5 @@ registry.register('tradeService', new TradeService(httpClient));
 registry.register('historyService', new HistoryService(httpClient));
 registry.register('historyQueryKeys', new HistoryQueryKeys());
 
-registry.register('profileService', new ProfileService(httpClient));
+registry.register('profileService', new ProfileService(httpClient, STORAGE_BASE_URL));
 registry.register('profileQueryKeys', new ProfileQueryKeys());

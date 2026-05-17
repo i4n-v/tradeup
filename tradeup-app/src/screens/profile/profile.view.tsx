@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button/button.component';
@@ -14,14 +14,17 @@ function ProfileView({
   onChangeAvatar,
   onLogout,
   isSaving,
+  isUploadingAvatar,
   email,
   avatarUrl,
   name,
   isLoading,
+  onRefresh,
+  isRefreshing,
 }: IProfileViewProps) {
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-4 pt-6">
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#eab308" />
@@ -41,8 +44,14 @@ function ProfileView({
     : '??';
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#eab308" />
+        }
+      >
         <View className="flex-1 px-4 pt-6">
           <Text className="text-2xl font-primary-semibold text-gray-900 mb-6">{PT_BR.profile.title}</Text>
           <View className="gap-6">
@@ -62,6 +71,8 @@ function ProfileView({
                 variant="ghost"
                 onPress={onChangeAvatar}
                 size="sm"
+                loading={isUploadingAvatar}
+                disabled={isUploadingAvatar}
                 accessibilityLabel={PT_BR.profile.changeAvatar}
               >
                 <Button.Text variant="ghost" size="sm">
