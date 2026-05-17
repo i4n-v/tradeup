@@ -28,7 +28,7 @@ final class EloquentUserRepository implements UserRepository
             $model = EloquentUser::create(UserMapper::fromDomain($user));
         } else {
             $model = EloquentUser::findOrFail($user->id());
-            $model->update(UserMapper::fromDomain($user));
+            $model->update(UserMapper::fromDomainForUpdate($user));
         }
 
         return UserMapper::toDomain($model->fresh());

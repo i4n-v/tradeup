@@ -30,4 +30,13 @@ final class UserMapper
             'avatar_path' => $user->avatarPath(),
         ];
     }
+
+    /** @return array<string, mixed> */
+    public static function fromDomainForUpdate(DomainUser $user): array
+    {
+        return [
+            'name' => $user->name(),
+            'avatar_path' => $user->avatarPath(),
+        ];
+    }
 }

@@ -8,8 +8,6 @@ use InvalidArgumentException;
 
 final class UploadAvatar
 {
-    private const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
-
     private const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
     private const MAX_DIMENSION_PX = 4096;
@@ -22,30 +20,37 @@ final class UploadAvatar
     {
         $file = $input->file;
 
-        if (! in_array($file->getMimeType(), self::ALLOWED_MIMES, true)) {
-            throw new InvalidArgumentException('Avatar must be a JPEG, PNG, or WebP image.');
-        }
-
         if ($file->getSize() > self::MAX_SIZE_BYTES) {
             throw new InvalidArgumentException('Avatar must not exceed 5 MB.');
         }
 
-        [$width, $height] = getimagesize($file->getRealPath());
+        $dimensions = getimagesize($file->getRealPath());
+
+        if ($dimensions === false) {
+            throw new InvalidArgumentException('Avatar file could not be read as an image.');
+        }
+
+        [$width, $height] = $dimensions;
 
         if ($width > self::MAX_DIMENSION_PX || $height > self::MAX_DIMENSION_PX) {
             throw new InvalidArgumentException('Avatar dimensions must not exceed 4096px.');
         }
 
         $extension = $file->getClientOriginalExtension() ?: $file->guessExtension();
-        $path = "avatars/{$input->userId}.{$extension}";
-
-        Storage::disk('public')->putFileAs('avatars', $file, "{$input->userId}.{$extension}");
+        $filename = "{$input->userId}_".time().".{$extension}";
+        $path = "avatars/{$filename}";
 
         $user = $this->users->findById($input->userId);
 
         if ($user === null) {
             throw new \RuntimeException('User not found.');
         }
+
+        if ($user->avatarPath() !== null) {
+            Storage::disk('public')->delete($user->avatarPath());
+        }
+
+        Storage::disk('public')->putFileAs('avatars', $file, $filename);
 
         $user->updateAvatarPath($path);
         $savedUser = $this->users->save($user);
