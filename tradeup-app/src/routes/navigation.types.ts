@@ -7,8 +7,7 @@ export type IUnauthStackParamList = {
 
 export type IAuthTabParamList = {
   Dashboard: undefined;
-  BuyTrade: undefined;
-  SellTrade: undefined;
+  Trade: { initialTab?: 'buy' | 'sell' | 'convert' } | undefined;
   History: undefined;
   Profile: undefined;
 };
