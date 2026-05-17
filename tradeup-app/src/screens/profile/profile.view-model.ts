@@ -9,6 +9,7 @@ import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
 import { useSessionStore } from '@/stores/session.store';
 import { PT_BR } from '@/i18n/pt-BR';
+import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 import type { IAvatarUploadInput } from '@/resources/services/profile/profile.type';
 import type { IProfileDomainDTO } from '@/resources/services/profile/dtos/profile.domain.dto';
 
@@ -49,7 +50,7 @@ function useProfileViewModel(): IProfileViewProps {
       toast.success(PT_BR.profile.nameUpdated);
       queryClient.invalidateQueries({ queryKey: profileQueryKeys.profile() });
     },
-    onError: () => toast.error(PT_BR.common.error),
+    onError: (error) => toast.error(getApiErrorMessage(error, PT_BR.profile.errors.nameSaveFailed)),
   });
 
   const avatarMutation = useMutation({
@@ -62,7 +63,8 @@ function useProfileViewModel(): IProfileViewProps {
       );
       queryClient.invalidateQueries({ queryKey: profileQueryKeys.profile() });
     },
-    onError: () => toast.error(PT_BR.common.error),
+    onError: (error) =>
+      toast.error(getApiErrorMessage(error, PT_BR.common.error)),
   });
 
   const onChangeAvatar = async () => {

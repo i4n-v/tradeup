@@ -13,6 +13,10 @@ export const PT_BR = {
     logoutConfirmMessage: 'Tem certeza que deseja sair?',
     logoutConfirmOk: 'Sair',
     logoutConfirmCancel: 'Cancelar',
+    errors: {
+      invalidCredentials: 'E-mail ou senha incorretos',
+      emailAlreadyTaken: 'Este e-mail já está em uso',
+    },
   },
   dashboard: {
     title: 'Carteira',
@@ -50,6 +54,10 @@ export const PT_BR = {
     },
     error: {
       generic: 'Erro ao realizar operação',
+      insufficientBrl: 'Saldo BRL insuficiente para esta operação',
+      insufficientBtc: 'Saldo BTC insuficiente para esta operação',
+      quoteUnavailable: 'Cotação BTC indisponível no momento. Tente novamente.',
+      zeroResult: 'Valor muito baixo. Informe um montante maior.',
     },
     placeholderBrl: 'Ex: 100,00',
     placeholderBtc: 'Ex: 0,00100000',
@@ -72,6 +80,12 @@ export const PT_BR = {
     changeAvatar: 'Alterar foto',
     nameUpdated: 'Nome atualizado com sucesso!',
     avatarUpdated: 'Foto atualizada com sucesso!',
+    errors: {
+      avatarTooLarge: 'A imagem não pode ultrapassar 5 MB',
+      avatarInvalidFormat: 'Formato de imagem inválido',
+      avatarInvalidDimensions: 'As dimensões da imagem excedem o limite permitido',
+      nameSaveFailed: 'Não foi possível salvar o nome. Tente novamente.',
+    },
   },
   common: {
     loading: 'Carregando...',

@@ -7,6 +7,8 @@ import { useForm } from 'react-hook-form';
 import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
 import { useSessionStore } from '@/stores/session.store';
+import { PT_BR } from '@/i18n/pt-BR';
+import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 import type { IUnauthStackParamList } from '@/routes/navigation.types';
 
 import { loginSchema, type ILoginFormValues } from './login.model';
@@ -29,8 +31,8 @@ function useLoginViewModel() {
       await authSession.persistToken(token);
       setSession(token, user);
     },
-    onError: () => {
-      toast.error('E-mail ou senha incorretos');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, PT_BR.auth.errors.invalidCredentials));
     },
   });
 

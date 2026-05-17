@@ -7,6 +7,7 @@ import { Registry } from '@lib/registry/registry.lib';
 import { toast } from '@/lib/toast/toast.lib';
 import type { IDashboardDomainDTO } from '@/resources/services/dashboard/dtos/dashboard.domain.dto';
 import { PT_BR } from '@/i18n/pt-BR';
+import { getApiErrorMessage } from '@/utils/api-error/api-error.util';
 
 import { sellSchema, type ISellFormValues, type ISellTradeViewProps } from './sell-trade.model';
 
@@ -59,9 +60,9 @@ function useSellTradeViewModel(): ISellTradeViewProps {
       }
       return { snapshot };
     },
-    onError: (_, __, ctx) => {
+    onError: (error, _, ctx) => {
       if (ctx?.snapshot) queryClient.setQueryData(dashboardQueryKeys.dashboard(), ctx.snapshot);
-      toast.error(PT_BR.trade.error.generic);
+      toast.error(getApiErrorMessage(error, PT_BR.trade.error.generic));
     },
     onSuccess: () => {
       toast.success(PT_BR.trade.success.sell);
